@@ -1,0 +1,11 @@
+# Python Cache
+__pycache__/
+*.py[cod]
+
+# Mac Systemdateien
+.DS_Store
+
+# venv
+venv/
+.env
+.vscode/
