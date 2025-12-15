@@ -48,8 +48,6 @@ while running:
             if action == "back":
                 game_state = "menu"
 
-    # --- Draw & Update ---
-
     if game_state == "menu":
         main_menu.draw(screen)
 

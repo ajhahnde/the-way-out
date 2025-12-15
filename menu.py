@@ -96,3 +96,6 @@ class SettingsMenu:
 
                     return btn["action"]
         return None
+
+
+# class MenuWhenInGame:
