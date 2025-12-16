@@ -3,6 +3,7 @@ import sys
 from settings import *
 from units import Wizard
 from menu import MainMenu, SettingsMenu
+from levels import *
 
 pygame.init()
 
@@ -50,7 +51,6 @@ while running:
 
     if game_state == "menu":
         main_menu.draw(screen)
-
     elif game_state == "settings":
         settings_menu.draw(screen)
 
