@@ -1,26 +1,23 @@
 import pygame
 import sys
 from settings import *
-from units import Wizard
-from menu import MainMenu, SettingsMenu
-from levels import *
+from menu import MainMenu, SettingsMenu, LevelMenu
+from levels import LevelManager
 
+# Setup & Initalisation
 pygame.init()
-
 screen = pygame.display.set_mode(
     (WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.SCALED)
 clock = pygame.time.Clock()
 
 main_menu = MainMenu(WIDTH, HEIGHT)
 settings_menu = SettingsMenu(WIDTH, HEIGHT)
+level_menu = LevelMenu(WIDTH, HEIGHT)
+level_manager = LevelManager(WIDTH, HEIGHT)
 
-all_sprites = pygame.sprite.Group()
-player = Wizard(WIDTH / 2, HEIGHT / 2)
-all_sprites.add(player)
-
+# Game loop
 game_state = "menu"
 running = True
-
 while running:
     dt = clock.tick(FPS) / 1000.0
 
@@ -30,15 +27,17 @@ while running:
             running = False
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            if game_state == "game":
+            if game_state == "lvls":
                 game_state = "menu"
             elif game_state == "settings":
                 game_state = "menu"
+            elif game_state == "game":
+                game_state = "lvls"
 
         if game_state == "menu":
             action = main_menu.handle_input(event)
-            if action == "game":
-                game_state = "game"
+            if action == "lvls":
+                game_state = "lvls"
             elif action == "settings":
                 game_state = "settings"
             elif action == "quit":
@@ -49,15 +48,28 @@ while running:
             if action == "back":
                 game_state = "menu"
 
+        elif game_state == "lvls":
+            action = level_menu.handle_input(event)
+            if action == "level1":
+                level_manager.load_level(0)
+                game_state = "game"
+            elif action == "level2":
+                level_manager.load_level(1)
+                game_state = "game"
+            elif action == "level3":
+                level_manager.load_level(2)
+                game_state = "game"
+
+    # Draw & Update
     if game_state == "menu":
         main_menu.draw(screen)
     elif game_state == "settings":
         settings_menu.draw(screen)
-
+    elif game_state == "lvls":
+        level_menu.draw(screen)
     elif game_state == "game":
-        all_sprites.update(dt)
-        screen.fill(BLACK)
-        all_sprites.draw(screen)
+        level_manager.update(dt)
+        level_manager.draw(screen)
 
     pygame.display.flip()
 

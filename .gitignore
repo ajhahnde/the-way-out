@@ -9,3 +9,7 @@ __pycache__/
 venv/
 .env
 .vscode/
+
+# IDK if my test backgrounds are copyright, so: (game works without as well)
+assets/background/test_bg_1.png
+assets/background/test_bg_2.png
