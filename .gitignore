@@ -2,15 +2,16 @@
 __pycache__/
 *.py[cod]
 
-# MacOS
+# MacOS Bin
 .DS_Store
 
 # venv
 venv/
+.venv
 .env
 .vscode/
 
-
+# 
 assets/background/test_bg_1.png
 assets/background/test_bg_2.png
 notes.txt

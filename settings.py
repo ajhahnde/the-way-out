@@ -12,4 +12,4 @@ BLACK = (0, 0, 0)
 PLAYER_SPEED = 600  # Pixel pro Sekunde
 PLAYER_SCALE = 5
 
-FONT = "assets/font/Font_1.otf"
+FONT = "assets/gui/font/main_font.otf"
