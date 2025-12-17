@@ -9,18 +9,18 @@ Ideas/Thoughts:
 
 - Topic: level menu 
 
-    - keep the the menu (select levels individually) [!]
+    - keep the the menu (select levels individually)
 
-    - add save option(s) and reset option for levels [!!!]
+    - add save option(s) and reset option for levels
 
-    - idication for complition of levels [!!]
+    - idication for complition of levels
 
-    - Should player be able to skip levels? [!]
+    - Should player be able to skip levels?
 
 
 - Topic: level design
 
-    - backgrounds [!!]
+    - backgrounds
 
     - rooms should be diffrent from each other in all ways the keep excitment high
 
@@ -28,9 +28,14 @@ Ideas/Thoughts:
 
 - Topic: loading screen
 
-    - add one [!!]
+    - add one
 
 
 - Topic: sounds
 
-    - maybe use memes as sounds? [!]
+    - maybe use memes as sounds?
+
+
+- Topic: characters
+
+    - diffrent stats for diffrent characters?

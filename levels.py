@@ -1,6 +1,5 @@
 import pygame
-from units import Wizard
-
+from units import Wizard, Penguin, Elf
 
 LEVEL_DATA = [
     {   # Level 1 (Index 0)
@@ -29,14 +28,13 @@ class LevelManager:
         self.width = width
         self.height = height
         self.display_surface = pygame.display.get_surface()
-
         self.all_sprites = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
 
         self.bg_image = None
         self.current_level_index = 0
 
-    def load_level(self, level_index):
+    def load_level(self, level_index, char_type="c_wiz"):
         self.current_level_index = level_index
         data = LEVEL_DATA[level_index]
         self.all_sprites.empty()
@@ -51,9 +49,18 @@ class LevelManager:
             self.bg_image = pygame.Surface((self.width, self.height))
             self.bg_image.fill((50, 50, 50))
 
-        # create player
+        # create player based on char_type
         start_x, start_y = data["player_start"]
-        self.player = Wizard(start_x, start_y)
+
+        if char_type == "c_wiz":
+            self.player = Wizard(start_x, start_y)
+        elif char_type == "c_peng":
+            self.player = Penguin(start_x, start_y)
+        elif char_type == "c_elf":
+            self.player = Elf(start_x, start_y)
+        else:
+            self.player = Wizard(start_x, start_y)  # Fallback
+
         self.all_sprites.add(self.player)
 
         # create enemy
