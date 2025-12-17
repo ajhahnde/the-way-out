@@ -1,6 +1,5 @@
-The Way Out - An experimental game project built with Python and Pygame.      
+# The Way Out - by ajhahnde
 
-The Way Out is a 2D game currently under development. This project utilizes the Pygame library to demonstrate game mechanics, level design, and unit management.
+The Way Out is an experimental 2D game inspired by escape rooms. It is currently in development using Python and the Pygame library.
 
-Code & ideas by ajhahnde
-assets by craftpix.net
+Code & ideas by ajhahnde | assets by craftpix.net
