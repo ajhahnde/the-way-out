@@ -48,15 +48,33 @@ class SettingsMenu:
         self.height = height
         self.font = pygame.font.Font(FONT, 60)
         self.sound_on = True
+        self.toggle_screen = True
+        self.screen_size_index = 0
+
+        self.resolutions = [
+            (2560, 1600),
+            (1920, 1080),
+            (1280, 960)
+        ]
+
         self.update_buttons()
 
     def update_buttons(self):
         sound_text = f"Sound: {'ON' if self.sound_on else 'OFF'}"
+        screen_text = f"{'FULLSCREEN' if self.toggle_screen else 'WINDOW'}"
+
+        w, h = self.resolutions[self.screen_size_index]
+        screen_size_t = f"{w}x{h}"
+
         self.buttons = [
-            {"text": sound_text, "rect": None, "action": "toggle_sound"}
+            {"text": sound_text, "rect": None, "action": "toggle_sound"},
+            {"text": screen_text, "rect": None, "action": "toggle_fs_w"},
+            {"text": screen_size_t, "rect": None, "action": "toggle_screen_size"}
         ]
+
         center_x = self.width // 2
         start_y = self.height // 2 - 50
+
         for i, btn in enumerate(self.buttons):
             text_surf = self.font.render(btn["text"], True, (255, 255, 255))
             btn["rect"] = text_surf.get_rect(
@@ -64,6 +82,7 @@ class SettingsMenu:
 
     def draw(self, screen):
         screen.fill((40, 30, 50))
+
         title = self.font.render("Settings", True, (255, 255, 255))
         title_rect = title.get_rect(center=(self.width // 2, 100))
         screen.blit(title, title_rect)
@@ -88,6 +107,23 @@ class SettingsMenu:
                     if btn["action"] == "toggle_sound":
                         self.sound_on = not self.sound_on
                         self.update_buttons()
+
+                    elif btn["action"] == "toggle_fs_w":
+                        self.toggle_screen = not self.toggle_screen
+                        pygame.display.toggle_fullscreen()
+                        self.update_buttons()
+
+                    elif btn["action"] == "toggle_screen_size":
+                        self.screen_size_index = (
+                            self.screen_size_index + 1) % len(self.resolutions)
+                        new_res = self.resolutions[self.screen_size_index]
+
+                        flags = pygame.FULLSCREEN if self.toggle_screen else 0
+                        pygame.display.set_mode(new_res, flags)
+
+                        self.width, self.height = new_res
+                        self.update_buttons()
+
                     return btn["action"]
         return None
 
