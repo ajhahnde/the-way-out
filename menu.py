@@ -1,11 +1,12 @@
 import pygame
+from settings import FONT
 
 
 class MainMenu:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.font = pygame.font.SysFont("Arial", 60, bold=True)
+        self.font = pygame.font.Font(FONT, 60)
 
         self.buttons = [
             {"text": "Levels", "rect": None, "action": "lvls"},
@@ -45,7 +46,7 @@ class SettingsMenu:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.font = pygame.font.SysFont("Arial", 60, bold=True)
+        self.font = pygame.font.Font(FONT, 60)
         self.sound_on = True
         self.update_buttons()
 
@@ -67,7 +68,7 @@ class SettingsMenu:
         title_rect = title.get_rect(center=(self.width // 2, 100))
         screen.blit(title, title_rect)
 
-        back_font = pygame.font.SysFont("Arial", 30, bold=True)
+        back_font = pygame.font.Font(FONT, 30)
         back = back_font.render("Esc to Back", True, (255, 255, 255))
         back_rect = back.get_rect(center=(100, 50))
         screen.blit(back, back_rect)
@@ -95,7 +96,7 @@ class LevelMenu:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.font = pygame.font.SysFont("Arial", 60, bold=True)
+        self.font = pygame.font.Font(FONT, 60)
 
         self.buttons = [
             {"text": "Level 1", "rect": None, "action": "level1"},
@@ -117,7 +118,7 @@ class LevelMenu:
         title_rect = title.get_rect(center=(self.width // 2, 100))
         screen.blit(title, title_rect)
 
-        back_font = pygame.font.SysFont("Arial", 30, bold=True)
+        back_font = pygame.font.Font(FONT, 30)
         back = back_font.render("Esc to Back", True, (255, 255, 255))
         back_rect = back.get_rect(center=(100, 50))
         screen.blit(back, back_rect)
@@ -143,7 +144,7 @@ class CharacterMenu:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.font = pygame.font.SysFont("Arial", 60, bold=True)
+        self.font = pygame.font.Font(FONT, 60)
 
         self.character = [
             {"text": "Wizard", "rect": None, "action": "c_wiz"},
@@ -167,7 +168,7 @@ class CharacterMenu:
         title_rect = title.get_rect(center=(self.width // 2, 100))
         screen.blit(title, title_rect)
 
-        back_font = pygame.font.SysFont("Arial", 30, bold=True)
+        back_font = pygame.font.Font(FONT, 30)
         back = back_font.render("Esc to Back", True, (255, 255, 255))
         back_rect = back.get_rect(center=(100, 50))
         screen.blit(back, back_rect)

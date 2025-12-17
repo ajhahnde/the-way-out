@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 
-# Mac Systemdateien
+# MacOS
 .DS_Store
 
 # venv
@@ -10,6 +10,7 @@ venv/
 .env
 .vscode/
 
-# IDK if my test backgrounds are copyright, so: (game works without as well)
+
 assets/background/test_bg_1.png
 assets/background/test_bg_2.png
+notes.txt
