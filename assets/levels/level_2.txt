@@ -1,0 +1,10 @@
+W W W W W W W W W W W W W W
+W P . . T3 . . A1 C2 . . D5 . W
+W . . . . . . . . . . . . W
+W E1 E2 E3 . . O4 O5 . . F1 . . W
+W . . . . . . . . . . . . W
+W . R3 . . H1 . . M12 . . J2 . W
+W . . . . . . . . . . . . W
+W . . Z1 . . C7 . T6 . . . X W
+W . . . . . . . . . . . . W
+W W W W W W W W W W W W W W

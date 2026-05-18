@@ -1,0 +1,327 @@
+import os
+import sys
+import threading
+
+import pygame
+
+from settings import WIDTH, HEIGHT, FPS
+from menu import (
+    MainMenu, SettingsMenu, LevelMenu, CharacterMenu, PauseMenu)
+from levels import LevelManager
+from editor import LevelEditor
+import audio
+
+# Setup & Initalisation
+pygame.init()
+# Always boot fullscreen at the monitor's own resolution — there is no
+# in-game resolution picker. settings.WIDTH/HEIGHT is only the fallback
+# if the desktop size can't be read.
+_desktop = pygame.display.get_desktop_sizes()
+SCREEN_W, SCREEN_H = (_desktop[0] if _desktop and _desktop[0][0] > 0
+                      else (WIDTH, HEIGHT))
+screen = pygame.display.set_mode(
+    (SCREEN_W, SCREEN_H),
+    pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.SCALED)
+pygame.display.set_caption("The Way Out")
+clock = pygame.time.Clock()
+
+main_menu = MainMenu(SCREEN_W, SCREEN_H)
+settings_menu = SettingsMenu(SCREEN_W, SCREEN_H)
+level_menu = LevelMenu(SCREEN_W, SCREEN_H)
+character_menu = CharacterMenu(SCREEN_W, SCREEN_H)
+pause_menu = PauseMenu(SCREEN_W, SCREEN_H)
+level_manager = LevelManager(SCREEN_W, SCREEN_H)
+editor = LevelEditor(SCREEN_W, SCREEN_H)
+
+# Apply the persisted sound + music-volume preferences before any
+# level can start. Volume goes through audio.set_music_volume so the
+# value is stored even though the mixer is still cold (it'll re-apply
+# on the first play_music).
+audio.set_enabled(settings_menu.sound_on)
+audio.set_music_volume(settings_menu.music_vol)
+
+# Background-music bed per screen. The start screen gets its own track;
+# every submenu (and the editor) shares a lighter "menu" bed; gameplay
+# music is owned by levels.py (the level's manifest "music"), so "game"
+# is intentionally absent here. "paused" is absent too — the level's
+# track keeps playing under the overlay. audio.play_music no-ops when
+# the name is unchanged, so submenu↔submenu navigation never re-fades
+# the bed, and missing track files just stay silent.
+_BGM_FOR_STATE = {
+    "menu": "title",
+    "updating": "title",
+    "settings": "menu",
+    "char_select": "menu",
+    "lvls": "menu",
+    "editor": "menu",
+}
+
+# Game state machine. ``paused`` is a frozen-world overlay; it preserves
+# every bit of level_manager state so Resume picks up mid-frame.
+# ``return_state`` remembers where to go when a game/run ends — normally
+# "lvls" (level menu), but "editor" when the level was launched via the
+# editor's Test button so the user lands back in the canvas.
+game_state = "menu"
+return_state = "lvls"
+current_character = "c_wiz"
+
+# Threaded update flow. The worker writes into update_state; the main
+# loop polls each frame and renders an animated status. phase is what
+# the worker is doing right now ("checking" / "updating"); result is set
+# exactly once when the worker is done.
+update_state = {"phase": None, "result": None}
+update_anim_t = 0.0
+_UPDATE_PHASE_TEXT = {
+    "checking": "Checking for updates",
+    "updating": "Updating",
+}
+_UPDATE_RESULT_TEXT = {
+    "uptodate": "Already up to date.",
+    "offline": "No internet - try again later.",
+    "unreachable": "Update server unreachable - try again later.",
+    "failed": "Update failed - try again later.",
+    "error": "Update error - try again later.",
+}
+
+
+def _run_update():
+    """Worker thread: drive check + apply_update without blocking the
+    event loop. Dict writes are GIL-atomic, which is enough for the
+    one-writer / one-reader hand-off here."""
+    try:
+        import updater
+        update_state["phase"] = "checking"
+        _loc, rem, avail = updater.check()
+        if rem is None:
+            # rem is None for "no net" AND "GitHub down / rate-limited /
+            # slow". Probe real connectivity so we don't tell a user with
+            # working internet that they have none.
+            update_state["result"] = (
+                "offline" if not updater.online() else "unreachable")
+            return
+        if not avail:
+            update_state["result"] = "uptodate"
+            return
+        update_state["phase"] = "updating"
+        if updater.apply_update(expected_sha=rem):
+            update_state["result"] = "done"
+        else:
+            update_state["result"] = "failed"
+    except Exception:
+        update_state["result"] = "error"
+
+
+def _start_level(level_id, return_to="lvls"):
+    """Load level by id (catalog string) and switch into the game state.
+    ``return_to`` is what we'll switch to when the level ends."""
+    global game_state, return_state
+    if not level_manager.load_level(level_id, current_character):
+        # Bad/empty/missing level file — don't strand the state machine
+        # in "game" with player=None (update() would crash). Bounce
+        # back to the level select instead.
+        _to_level_menu()
+        return
+    game_state = "game"
+    return_state = return_to
+
+
+def _to_level_menu():
+    """Bail to the level select — always refreshes so a freshly beaten
+    level lights up immediately and any new custom level appears."""
+    global game_state
+    level_menu.refresh()
+    game_state = "lvls"
+
+
+def _leave_game():
+    """End the run and route back to whatever opened the level."""
+    global game_state
+    if return_state == "editor":
+        editor.reset_pointer_state()
+        game_state = "editor"
+    else:
+        _to_level_menu()
+
+
+running = True
+while running:
+    # Clamp dt so a hitch (focus loss, level load, the update HTTP
+    # call, an OS stall) can't teleport the player or fast-forward
+    # timers. Cap at ~3 frames; below that the sim stays frame-fair.
+    dt = min(clock.tick(FPS) / 1000.0, 3.0 / FPS)
+
+    # Events ---------------------------------------------------------
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        # Losing focus while fullscreen (Cmd-Tab, Mission Control, a
+        # notification) makes SDL freeze key state: get_pressed() keeps
+        # reporting the last-held key, so the player would run on
+        # forever. Auto-pause live gameplay; the user resumes from the
+        # pause menu with a clean input state.
+        if event.type in (pygame.WINDOWFOCUSLOST, pygame.WINDOWMINIMIZED):
+            if (game_state == "game"
+                    and not (level_manager.completed
+                             or level_manager.failed)):
+                game_state = "paused"
+            # Same SDL freeze hits the editor: a held mouse button can
+            # get stuck down, so a mid-Shift-drag would later commit a
+            # stray box-fill. Drop the editor's transient pointer state.
+            elif game_state == "editor":
+                editor.reset_pointer_state()
+
+        # Esc is shared by every menu / overlay state — handle it here
+        # so the routing stays in one place. ``editor`` swallows its
+        # own Esc via handle_input so the user can quit while typing
+        # a filename without nuking the session.
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            if game_state in ("lvls", "settings", "char_select"):
+                game_state = "menu"
+            elif game_state == "paused":
+                game_state = "game"
+            elif game_state == "game":
+                if level_manager.completed or level_manager.failed:
+                    _leave_game()
+                else:
+                    game_state = "paused"
+
+        # In a finished level: R retries, Enter/Space bails out.
+        if (game_state == "game"
+                and (level_manager.completed or level_manager.failed)
+                and event.type == pygame.KEYDOWN):
+            if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                _leave_game()
+            elif event.key == pygame.K_r:
+                if not level_manager.load_level(
+                        level_manager.level_id, current_character):
+                    _leave_game()
+
+        # Main menu
+        if game_state == "menu":
+            action = main_menu.handle_input(event)
+            if action == "lvls":
+                _to_level_menu()
+            elif action == "editor":
+                editor.reset_pointer_state()
+                game_state = "editor"
+            elif action == "settings":
+                game_state = "settings"
+            elif action == "chars":
+                game_state = "char_select"
+            elif action == "update":
+                # Hand the work off to a thread so the event loop can
+                # keep pumping (no macOS beachball) and animate the
+                # status. The main loop polls update_state each frame.
+                update_state["phase"] = "checking"
+                update_state["result"] = None
+                update_anim_t = 0.0
+                main_menu.status = ""
+                threading.Thread(
+                    target=_run_update, daemon=True).start()
+                game_state = "updating"
+            elif action == "quit":
+                running = False
+
+        # Editor — Esc returns to menu; Test (F5 or button) requests a
+        # play session that lands back here when it ends.
+        elif game_state == "editor":
+            action = editor.handle_input(event)
+            if action == "back":
+                game_state = "menu"
+            elif action == "test":
+                level_menu.refresh()    # so the new custom shows up later
+                _start_level(editor.test_level_id, return_to="editor")
+                editor.request_test = False
+
+        # Settings
+        elif game_state == "settings":
+            action = settings_menu.handle_input(event)
+            if action == "back":
+                game_state = "menu"
+
+        # Charakter select
+        elif game_state == "char_select":
+            action = character_menu.handle_input(event)
+            if action:
+                current_character = action
+                game_state = "menu"
+
+        # Levels select — action is the chosen level id (from catalog).
+        elif game_state == "lvls":
+            action = level_menu.handle_input(event)
+            if action:
+                _start_level(action)
+
+        # Pause overlay
+        elif game_state == "paused":
+            action = pause_menu.handle_input(event)
+            if action == "resume":
+                game_state = "game"
+            elif action == "restart":
+                if level_manager.load_level(
+                        level_manager.level_id, current_character):
+                    game_state = "game"
+                else:
+                    _leave_game()
+            elif action == "quit":
+                _leave_game()
+
+    # BGM follows the state machine. Game/paused are deliberately
+    # absent: levels.py owns the in-level track via the manifest, and
+    # pause should not swap the bed (the level's music keeps playing
+    # under the overlay). audio.play_music guards same-name calls, so
+    # this is a no-op when the screen didn't actually change.
+    _bgm = _BGM_FOR_STATE.get(game_state)
+    if _bgm is not None:
+        audio.play_music(_bgm)
+
+    # Draw & Update --------------------------------------------------
+    if game_state == "menu":
+        main_menu.draw(screen)
+    elif game_state == "updating":
+        update_anim_t += dt
+        result = update_state["result"]
+        if result == "done":
+            main_menu.status = "Updated - restarting..."
+            main_menu.draw(screen)
+            pygame.display.flip()
+            pygame.time.delay(900)
+            pygame.quit()                              # before execv
+            if getattr(sys, "frozen", False):
+                os.execv(sys.executable, [sys.executable])
+            else:
+                os.execv(sys.executable,
+                         [sys.executable, os.path.abspath(__file__)])
+        elif result is not None:
+            main_menu.status = _UPDATE_RESULT_TEXT.get(
+                result, "Update failed - try again later.")
+            game_state = "menu"
+            main_menu.draw(screen)
+        else:
+            phase = update_state["phase"] or "checking"
+            dots = "." * (1 + int(update_anim_t * 2) % 3)
+            main_menu.status = (
+                f"{_UPDATE_PHASE_TEXT.get(phase, 'Updating')}{dots}")
+            main_menu.draw(screen)
+    elif game_state == "settings":
+        settings_menu.draw(screen)
+    elif game_state == "char_select":
+        character_menu.draw(screen, current_character)
+    elif game_state == "lvls":
+        level_menu.draw(screen)
+    elif game_state == "editor":
+        editor.update(dt)
+        editor.draw(screen)
+    elif game_state == "game":
+        level_manager.update(dt)
+        level_manager.draw(screen)
+    elif game_state == "paused":
+        # Render the frozen world, then the pause overlay on top.
+        level_manager.draw(screen)
+        pause_menu.draw(screen)
+
+    pygame.display.flip()
+
+pygame.quit()
+sys.exit()

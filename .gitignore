@@ -1,0 +1,27 @@
+# Python Cache
+__pycache__/
+*.py[cod]
+
+# MacOS Bin
+.DS_Store
+
+# Python virtualenvs (arm64 build env -> build_mac.sh;
+# x86_64 cross-build env .venv-intel -> build_mac_intel.sh)
+venv/
+.venv/
+.venv-intel/
+
+# Local env file & editor config
+.env
+.vscode/
+
+# Unused/local-only assets & notes
+assets/background/test_bg_1.png
+assets/background/test_bg_2.png
+ajhahnde/
+
+
+# PyInstaller build output (the self-updating Mac launcher)
+build/
+dist/
+*.spec

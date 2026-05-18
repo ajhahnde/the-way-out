@@ -1,0 +1,543 @@
+import pygame
+from units import CHARACTER_INFO
+import level_catalog
+import save
+import audio
+import theme
+# Palette, font cache and the shared title / back-hint / hover
+# primitives. Bound to module-private aliases to match the internal
+# naming used by the screens below.
+from theme import (
+    BG, INK, MUTED, ACCENT, TITLE_C, DONE_C, SEL_C, LINE_C,
+    measure,
+    draw_title as _draw_title,
+    draw_back_hint as _draw_back_hint,
+    hover_marker as _hover_marker)
+
+
+class MainMenu:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.font = theme.font(46)
+        self.title_font = theme.font(78)
+        self.small_font = theme.font(24)
+        # Set by main.py's update flow; drawn under the tip line.
+        self.status = ""
+
+        self.buttons = [
+            {"text": "Levels", "rect": None, "action": "lvls"},
+            {"text": "Editor", "rect": None, "action": "editor"},
+            {"text": "Characters", "rect": None, "action": "chars"},
+            {"text": "Settings", "rect": None, "action": "settings"},
+            {"text": "Update", "rect": None, "action": "update"},
+            {"text": "Quit", "rect": None, "action": "quit"}
+        ]
+
+        center_x = width // 2
+        start_y = height // 2 - 100
+
+        for i, btn in enumerate(self.buttons):
+            rect = measure(self.font, btn["text"])
+            rect.center = (center_x, start_y + i * 90)
+            btn["rect"] = rect
+
+        # Slow pixel-dust drifting upward — keeps the title screen alive
+        # without competing with the menu (matches the pixel aesthetic).
+        self.dust = theme.PixelDust(width, height, seed=7, count=60)
+
+    def draw(self, screen):
+        screen.fill(BG)
+        self.dust.draw(screen)
+        mouse_pos = pygame.mouse.get_pos()
+
+        title = self.title_font.render("THE WAY OUT", True, TITLE_C)
+        screen.blit(title, title.get_rect(
+            center=(self.width // 2, self.height // 2 - 210)))
+
+        for btn in self.buttons:
+            is_hovered = btn["rect"].collidepoint(mouse_pos)
+            # Thin separator above the last item (Quit) to set it apart.
+            if btn["action"] == "quit":
+                ly = btn["rect"].top - 22
+                pygame.draw.line(screen, LINE_C,
+                                 (self.width // 2 - 90, ly),
+                                 (self.width // 2 + 90, ly), 2)
+            color = ACCENT if is_hovered else INK
+            text_surf = self.font.render(btn["text"], True, color)
+            screen.blit(text_surf, btn["rect"])
+            if is_hovered:
+                _hover_marker(screen, btn["rect"])
+
+        d = theme.HINT_DOT
+        tip = self.small_font.render(
+            f"WASD/Arrows move & aim   {d}   Space shoot   {d}   "
+            f"Shift dash   {d}   E use",
+            True, MUTED)
+        screen.blit(tip, tip.get_rect(
+            center=(self.width // 2, self.height - 58)))
+
+        if self.status:
+            # INK, not ACCENT: the gold accent is too low-contrast for a
+            # full line of small text on the dark background.
+            status_surf = self.small_font.render(self.status, True, INK)
+            screen.blit(status_surf, status_surf.get_rect(
+                center=(self.width // 2, self.height - 98)))
+
+    def handle_input(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            for btn in self.buttons:
+                if btn["rect"].collidepoint(mouse_pos):
+                    return btn["action"]
+        return None
+
+
+class SettingsMenu:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.font = theme.font(46)
+        self.title_font = theme.font(56)
+        self.small_font = theme.font(24)
+        # Persisted preference; main.py applies it to the audio module
+        # at startup so it holds before Settings is ever opened.
+        _prefs = save.load_settings()
+        self.sound_on = _prefs.get("sound", True)
+        # Five-step bed level (0 / 25 / 50 / 75 / 100 %) — coarse on
+        # purpose so a click cycles through them clearly. Volume is
+        # independent of the sound toggle: muting kills audio outright,
+        # the slider sets the music level when audio is on.
+        raw_vol = _prefs.get("music_vol", 1.0)
+        self.music_vol = max(0.0, min(1.0,
+            float(raw_vol) if isinstance(raw_vol, (int, float)) else 1.0))
+        # Fullscreen vs. bordered window only — no resolution picker.
+        # The game always boots fullscreen at the monitor's own size
+        # (main.py); this toggle is session-only, never persisted.
+        self.toggle_screen = True
+
+        # Same idle motion as the title screen but quieter — a
+        # different seed gives each submenu its own pattern.
+        self.dust = theme.PixelDust(width, height, seed=11, count=35)
+
+        self.update_buttons()
+
+    def update_buttons(self):
+        sound_text = f"Sound: {'ON' if self.sound_on else 'OFF'}"
+        music_text = f"Music: {int(round(self.music_vol * 100))}%"
+        screen_text = (
+            f"Screen: {'FULLSCREEN' if self.toggle_screen else 'BORDERED'}")
+
+        self.buttons = [
+            {"text": sound_text, "rect": None, "action": "toggle_sound"},
+            {"text": music_text, "rect": None, "action": "cycle_music"},
+            {"text": screen_text, "rect": None, "action": "toggle_fs_w"},
+        ]
+
+        center_x = self.width // 2
+        start_y = self.height // 2 - 100
+
+        for i, btn in enumerate(self.buttons):
+            rect = measure(self.font, btn["text"])
+            rect.center = (center_x, start_y + i * 100)
+            btn["rect"] = rect
+
+    def draw(self, screen):
+        screen.fill(BG)
+        self.dust.draw(screen)
+        _draw_title(screen, self.title_font, "Settings", self.width)
+        _draw_back_hint(screen, self.small_font)
+
+        mouse_pos = pygame.mouse.get_pos()
+        for btn in self.buttons:
+            is_hovered = btn["rect"].collidepoint(mouse_pos)
+            color = ACCENT if is_hovered else INK
+            screen.blit(self.font.render(
+                btn["text"], True, color), btn["rect"])
+            if is_hovered:
+                _hover_marker(screen, btn["rect"])
+
+    def handle_input(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            for btn in self.buttons:
+                if btn["rect"].collidepoint(mouse_pos):
+                    if btn["action"] == "toggle_sound":
+                        self.sound_on = not self.sound_on
+                        audio.set_enabled(self.sound_on)
+                        save.set_setting("sound", self.sound_on)
+                        self.update_buttons()
+
+                    elif btn["action"] == "cycle_music":
+                        # Cycle 0 → 25 → 50 → 75 → 100 → 0. Snap any
+                        # off-step saved value to the next step up.
+                        steps = (0.0, 0.25, 0.5, 0.75, 1.0)
+                        cur = round(self.music_vol * 4) / 4
+                        idx = (steps.index(cur) + 1) % len(steps) \
+                            if cur in steps else 0
+                        self.music_vol = steps[idx]
+                        audio.set_music_volume(self.music_vol)
+                        save.set_setting("music_vol", self.music_vol)
+                        self.update_buttons()
+
+                    elif btn["action"] == "toggle_fs_w":
+                        self.toggle_screen = not self.toggle_screen
+                        pygame.display.toggle_fullscreen()
+                        self.update_buttons()
+
+                    return btn["action"]
+        return None
+
+
+class LevelMenu:
+    """Level select with completion checkmarks read from ``save.py``.
+
+    Entries are rebuilt from ``level_catalog`` on every ``refresh()`` so:
+      * freshly-beaten levels light up the next time you back to the menu
+      * a custom level the player just saved in the editor appears
+        without restarting the game
+
+    Built-in levels are listed first (manifest order); user-built levels
+    follow, visually marked as ``Custom``.
+    """
+
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.font = theme.font(46)
+        self.title_font = theme.font(56)
+        self.small_font = theme.font(24)
+        self.tag_font = theme.font(22)
+        self.best_font = theme.font(20)
+
+        self.times = {}
+        self.entries = []
+        # Idle motion, kept thinner than the title because this screen
+        # is text-dense (rows of titles, taglines and best times).
+        self.dust = theme.PixelDust(width, height, seed=13, count=25)
+        self.refresh()
+
+    def _layout(self):
+        """Stack entries vertically, auto-shrinking spacing when the
+        catalog grows so custom levels still fit on screen."""
+        if not self.entries:
+            return
+        count = len(self.entries)
+        # 130 px per row up to 5 entries, then tighten so 10 still fit.
+        gap = max(60, min(130, (self.height - 240) // max(count, 1)))
+        center_x = self.width // 2
+        start_y = self.height // 2 - (count - 1) * gap // 2
+        for i, btn in enumerate(self.entries):
+            rect = measure(self.font, btn["text"])
+            rect.center = (center_x, start_y + i * gap)
+            btn["rect"] = rect
+
+    def refresh(self):
+        """Rebuild entries from the catalog + reread completed ids and
+        best times."""
+        self.completed = save.load_completed()
+        self.times = save.load_times()
+        self.entries = []
+        for entry in level_catalog.load_catalog():
+            self.entries.append({
+                "text": entry.title,
+                "action": entry.id,
+                "tagline": entry.tagline,
+                "custom": entry.custom,
+                "rect": None,
+            })
+        self._layout()
+
+    def draw(self, screen):
+        screen.fill(BG)
+        self.dust.draw(screen)
+        _draw_title(screen, self.title_font, "Levels", self.width)
+        _draw_back_hint(screen, self.small_font)
+
+        if not self.entries:
+            empty = self.small_font.render(
+                "No levels found — check assets/levels/manifest.json",
+                True, MUTED)
+            screen.blit(empty, empty.get_rect(
+                center=(self.width // 2, self.height // 2)))
+            return
+
+        mouse_pos = pygame.mouse.get_pos()
+
+        for btn in self.entries:
+            is_hovered = btn["rect"].collidepoint(mouse_pos)
+            is_done = btn["action"] in self.completed
+            if is_hovered:
+                color = ACCENT
+            elif is_done:
+                color = DONE_C
+            else:
+                color = INK
+            text_surf = self.font.render(btn["text"], True, color)
+            screen.blit(text_surf, btn["rect"])
+            if is_hovered:
+                _hover_marker(screen, btn["rect"])
+
+            tag = btn["tagline"]
+            if btn["custom"]:
+                # No pill — a quiet prefix keeps the row flat.
+                tag = f"custom · {tag}"
+            tag_surf = self.tag_font.render(
+                tag, True,
+                MUTED if not is_done else theme.shade(DONE_C, -30))
+            screen.blit(tag_surf, tag_surf.get_rect(
+                center=(btn["rect"].centerx, btn["rect"].bottom + 16)))
+
+            best = self.times.get(btn["action"])
+            if best is not None:
+                m, s = divmod(int(best), 60)
+                # INK, not ACCENT: a persistent 20px label in the gold
+                # accent is too low-contrast to read (same reason the
+                # update status line uses INK).
+                bt = self.best_font.render(
+                    f"best  {m}:{s:02d}", True, INK)
+                screen.blit(bt, bt.get_rect(
+                    center=(btn["rect"].centerx, btn["rect"].bottom + 42)))
+
+            if is_done:
+                # Minimal check: a thin tick, no filled circle.
+                tx = btn["rect"].left - 60
+                ty = btn["rect"].centery
+                pygame.draw.lines(screen, DONE_C, False, [
+                    (tx - 9, ty),
+                    (tx - 2, ty + 8),
+                    (tx + 11, ty - 8)], 3)
+
+    def handle_input(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            for btn in self.entries:
+                if btn["rect"] and btn["rect"].collidepoint(mouse_pos):
+                    return btn["action"]
+        return None
+
+
+class CharacterMenu:
+    """Character select with the stat block of the currently-hovered
+    (or, if none, currently-selected) character shown alongside."""
+
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.title_font = theme.font(56)
+        self.card_font = theme.font(44)
+        self.name_font = theme.font(46)
+        self.small_font = theme.font(24)
+        self.stat_font = theme.font(24)
+        self.tagline_font = theme.font(22)
+
+        # Build entries from the units catalogue.
+        self.character = []
+        for key, cls, label, tagline in CHARACTER_INFO:
+            self.character.append({
+                "text": label,
+                "action": key,
+                "tagline": tagline,
+                "cls": cls,
+                "rect": None,
+            })
+
+        # Left-align every name on a single vertical line so the column
+        # doesn't zigzag with each name's width.
+        self.name_x = width // 2 - 320
+        start_y = height // 2 - 200
+
+        for i, btn in enumerate(self.character):
+            rect = measure(self.name_font, btn["text"])
+            rect.midleft = (self.name_x, start_y + i * 100)
+            btn["rect"] = rect
+
+        # One idle sprite per character, shown left of the list on hover.
+        self.previews = {}
+        for key, cls, label, tagline in CHARACTER_INFO:
+            self.previews[key] = self._load_preview(cls)
+
+        # Idle motion — quieter than the title screen so it doesn't
+        # compete with the stat block on the right.
+        self.dust = theme.PixelDust(width, height, seed=17, count=30)
+
+    def _load_preview(self, cls):
+        """Every idle frame, scaled — the hovered character loops its
+        idle animation instead of standing on a single frame."""
+        try:
+            sheet = pygame.image.load(
+                f"assets/units/{cls.asset_folder}/D_Idle.png").convert_alpha()
+        except (pygame.error, FileNotFoundError):
+            return None
+        _, count = cls.SPRITE_SHEETS['idle_down']
+        fw = sheet.get_width() // count
+        fh = sheet.get_height()
+        target_h = 220
+        scale = target_h / fh
+        size = (int(fw * scale), int(fh * scale))
+        return [
+            pygame.transform.scale(
+                sheet.subsurface(pygame.Rect(i * fw, 0, fw, fh)), size)
+            for i in range(count)
+        ]
+
+    def draw(self, screen, current_selected):
+        screen.fill(BG)
+        self.dust.draw(screen)
+        _draw_title(screen, self.title_font, "Select Character", self.width)
+        _draw_back_hint(screen, self.small_font)
+
+        mouse_pos = pygame.mouse.get_pos()
+
+        # Choose which character's stats to show: hovered first,
+        # otherwise the current selection.
+        focus = None
+        for btn in self.character:
+            if btn["rect"].collidepoint(mouse_pos):
+                focus = btn
+                break
+        if focus is None:
+            for btn in self.character:
+                if btn["action"] == current_selected:
+                    focus = btn
+                    break
+
+        for btn in self.character:
+            is_hovered = btn["rect"].collidepoint(mouse_pos)
+
+            if btn["action"] == current_selected:
+                color = SEL_C
+            elif is_hovered:
+                color = ACCENT
+            else:
+                color = INK
+
+            text_surf = self.name_font.render(btn["text"], True, color)
+            screen.blit(text_surf, btn["rect"])
+            if is_hovered:
+                _hover_marker(screen, btn["rect"])
+            tag = self.tagline_font.render(
+                btn["tagline"], True, MUTED)
+            screen.blit(tag, tag.get_rect(
+                topleft=(btn["rect"].left, btn["rect"].bottom + 4)))
+
+        if focus is not None:
+            frames = self.previews.get(focus["action"])
+            if frames:
+                # ~7 fps idle loop, timed off the wall clock so this
+                # screen doesn't need a dt plumbed in just for the sprite.
+                frame = frames[(pygame.time.get_ticks() // 140) % len(frames)]
+                pcx = self.name_x - 170
+                pcy = self.height // 2
+                screen.blit(frame, frame.get_rect(center=(pcx, pcy)))
+            self._draw_stat_card(screen, focus)
+
+    def _draw_stat_card(self, screen, btn):
+        cls = btn["cls"]
+        # No box: a flat column with one thin separator under the name.
+        card_w = 520
+        cx = self.width // 2 + 360
+        left = cx - card_w // 2
+        top = self.height // 2 - 220
+
+        name = self.card_font.render(btn["text"], True, TITLE_C)
+        screen.blit(name, name.get_rect(center=(cx, top)))
+        tag = self.tagline_font.render(btn["tagline"], True, MUTED)
+        screen.blit(tag, tag.get_rect(center=(cx, top + 44)))
+        pygame.draw.line(screen, LINE_C,
+                         (left + 20, top + 78),
+                         (left + card_w - 20, top + 78), 2)
+
+        stats = [
+            ("HP",        cls.max_hp, 200),
+            ("SPEED",     cls.speed, 900),
+            ("DAMAGE",    cls.attack_damage, 25),
+            ("FIRE RATE", 1.0 / max(0.01, cls.attack_cooldown), 6.0),
+        ]
+        bar_x = left + 130
+        bar_w = card_w - 170
+        bar_h = 10
+        y = top + 130
+        for label, val, vmax in stats:
+            text = self.stat_font.render(label, True, MUTED)
+            screen.blit(text, text.get_rect(midleft=(left + 20, y + 5)))
+            ratio = max(0.05, min(1.0, val / vmax))
+            theme.draw_bar(screen,
+                           pygame.Rect(bar_x, y, bar_w, bar_h),
+                           ratio, ACCENT, border=False)
+            num = self.stat_font.render(
+                f"{val:.1f}" if isinstance(val, float) else str(val),
+                True, INK)
+            screen.blit(num, num.get_rect(midleft=(bar_x + bar_w + 12, y + 5)))
+            y += 56
+
+    def handle_input(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            for btn in self.character:
+                if btn["rect"].collidepoint(mouse_pos):
+                    return btn["action"]
+        return None
+
+
+class PauseMenu:
+    """Translucent overlay over the live game.
+
+    The level keeps its state — ``main.py`` simply stops calling
+    ``LevelManager.update`` while paused, so the next Resume picks up
+    exactly where you froze.
+    """
+
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.font = theme.font(50)
+        self.title_font = theme.font(76)
+        self.hint_font = theme.font(24)
+
+        self.buttons = [
+            {"text": "Resume",       "action": "resume"},
+            {"text": "Restart Level", "action": "restart"},
+            {"text": "Quit to Menu", "action": "quit"},
+        ]
+
+        cx = width // 2
+        start_y = height // 2 - 30
+        for i, btn in enumerate(self.buttons):
+            rect = measure(self.font, btn["text"])
+            rect.center = (cx, start_y + i * 110)
+            btn["rect"] = rect
+
+    def draw(self, screen):
+        overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        overlay.fill((*BG, 210))
+        screen.blit(overlay, (0, 0))
+
+        title = self.title_font.render("PAUSED", True, TITLE_C)
+        t_rect = title.get_rect(
+            center=(self.width // 2, self.height // 2 - 200))
+        screen.blit(title, t_rect)
+        ly = t_rect.bottom + 16
+        pygame.draw.line(screen, LINE_C,
+                         (self.width // 2 - 150, ly),
+                         (self.width // 2 + 150, ly), 2)
+
+        mp = pygame.mouse.get_pos()
+        for btn in self.buttons:
+            hov = btn["rect"].collidepoint(mp)
+            col = ACCENT if hov else INK
+            screen.blit(self.font.render(btn["text"], True, col), btn["rect"])
+            if hov:
+                _hover_marker(screen, btn["rect"])
+
+        hint = self.hint_font.render("Esc to resume", True, MUTED)
+        screen.blit(hint, hint.get_rect(
+            center=(self.width // 2, self.height - 88)))
+
+    def handle_input(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mp = pygame.mouse.get_pos()
+            for btn in self.buttons:
+                if btn["rect"].collidepoint(mp):
+                    return btn["action"]
+        return None

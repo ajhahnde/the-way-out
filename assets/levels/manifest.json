@@ -1,0 +1,25 @@
+{
+  "levels": [
+    {
+      "id": "level_1",
+      "file": "level_1.txt",
+      "title": "LEVEL 1",
+      "tagline": "Mr. Green's Keep",
+      "music": "ingame"
+    },
+    {
+      "id": "level_2",
+      "file": "level_2.txt",
+      "title": "LEVEL 2",
+      "tagline": "The Cellar",
+      "music": "ingame"
+    },
+    {
+      "id": "level_3",
+      "file": "level_3.txt",
+      "title": "LEVEL 3",
+      "tagline": "The Plate Tomb",
+      "music": "ingame"
+    }
+  ]
+}
