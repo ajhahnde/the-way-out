@@ -4,7 +4,7 @@ A top-down pixel-art escape-room shooter. Pick a character, fight your
 way through locked rooms, work the levers and pressure plates, and find
 the way out.
 
-**Version:** v0.1.0 — see [Release Notes](RELEASE_NOTES.md)
+**Version:** v0.2.0 — see [Release Notes](RELEASE_NOTES.md)
 
 ## Play
 

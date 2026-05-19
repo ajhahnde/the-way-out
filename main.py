@@ -13,6 +13,13 @@ import audio
 
 # Setup & Initalisation
 pygame.init()
+# set_icon must happen BEFORE set_mode for the icon to take effect on
+# the actual macOS window (not just the Dock).
+try:
+    pygame.display.set_icon(
+        pygame.image.load(os.path.join("assets", "icon_1024.png")))
+except (pygame.error, FileNotFoundError, OSError):
+    pass
 # Always boot fullscreen at the monitor's own resolution — there is no
 # in-game resolution picker. settings.WIDTH/HEIGHT is only the fallback
 # if the desktop size can't be read.
@@ -177,6 +184,10 @@ while running:
         # a filename without nuking the session.
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             if game_state in ("lvls", "settings", "char_select"):
+                # Returning to the title screen — drop any stale update
+                # toast so it doesn't reappear long after the user has
+                # moved on.
+                main_menu.clear_status()
                 game_state = "menu"
             elif game_state == "paused":
                 game_state = "game"
@@ -201,13 +212,17 @@ while running:
         if game_state == "menu":
             action = main_menu.handle_input(event)
             if action == "lvls":
+                main_menu.clear_status()
                 _to_level_menu()
             elif action == "editor":
+                main_menu.clear_status()
                 editor.reset_pointer_state()
                 game_state = "editor"
             elif action == "settings":
+                main_menu.clear_status()
                 game_state = "settings"
             elif action == "chars":
+                main_menu.clear_status()
                 game_state = "char_select"
             elif action == "update":
                 # Hand the work off to a thread so the event loop can
@@ -216,7 +231,7 @@ while running:
                 update_state["phase"] = "checking"
                 update_state["result"] = None
                 update_anim_t = 0.0
-                main_menu.status = ""
+                main_menu.clear_status()
                 threading.Thread(
                     target=_run_update, daemon=True).start()
                 game_state = "updating"
@@ -276,6 +291,21 @@ while running:
     if _bgm is not None:
         audio.play_music(_bgm)
 
+    # Mouse cursor: hidden during live gameplay (combat is keyboard +
+    # 4-way facing — no aim cursor); visible everywhere else, including
+    # the keyboard-driven level-end screen so the player can still see
+    # the cursor land in pause/menu/editor cleanly.
+    in_active_game = (game_state == "game"
+                      and not level_manager.completed
+                      and not level_manager.failed)
+    pygame.mouse.set_visible(not in_active_game)
+
+    # Auto-dismiss the main-menu status toast once its TTL elapses so a
+    # stale "Already up to date." doesn't sit on screen forever.
+    if (main_menu.status_until is not None
+            and pygame.time.get_ticks() / 1000.0 > main_menu.status_until):
+        main_menu.clear_status()
+
     # Draw & Update --------------------------------------------------
     if game_state == "menu":
         main_menu.draw(screen)
@@ -283,7 +313,7 @@ while running:
         update_anim_t += dt
         result = update_state["result"]
         if result == "done":
-            main_menu.status = "Updated - restarting..."
+            main_menu.set_status("Updated - restarting...", ttl=None)
             main_menu.draw(screen)
             pygame.display.flip()
             pygame.time.delay(900)
@@ -294,15 +324,16 @@ while running:
                 os.execv(sys.executable,
                          [sys.executable, os.path.abspath(__file__)])
         elif result is not None:
-            main_menu.status = _UPDATE_RESULT_TEXT.get(
-                result, "Update failed - try again later.")
+            main_menu.set_status(_UPDATE_RESULT_TEXT.get(
+                result, "Update failed - try again later."))
             game_state = "menu"
             main_menu.draw(screen)
         else:
             phase = update_state["phase"] or "checking"
             dots = "." * (1 + int(update_anim_t * 2) % 3)
-            main_menu.status = (
-                f"{_UPDATE_PHASE_TEXT.get(phase, 'Updating')}{dots}")
+            main_menu.set_status(
+                f"{_UPDATE_PHASE_TEXT.get(phase, 'Updating')}{dots}",
+                ttl=None)
             main_menu.draw(screen)
     elif game_state == "settings":
         settings_menu.draw(screen)

@@ -55,6 +55,7 @@ rm -rf build dist "$APPNAME.spec"
 arch -x86_64 "$PY" -m PyInstaller --noconfirm --windowed --clean \
   --name "$APPNAME" \
   --osx-bundle-identifier de.ajhahn.thewayout \
+  --icon assets/icon.icns \
   --collect-all pygame \
   --target-architecture x86_64 \
   --add-data "$SEED:_seed" \

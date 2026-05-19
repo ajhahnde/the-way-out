@@ -22,6 +22,7 @@ rm -rf build dist "$APPNAME.spec"
 "$PY" -m PyInstaller --noconfirm --windowed --clean \
   --name "$APPNAME" \
   --osx-bundle-identifier de.ajhahn.thewayout \
+  --icon assets/icon.icns \
   --collect-all pygame \
   --add-data "$SEED:_seed" \
   launcher.py

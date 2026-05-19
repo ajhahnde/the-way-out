@@ -53,6 +53,14 @@ def _error_screen(lines):
         import pygame
         pygame.init()
         sw, sh = 720, 360
+        # set_icon must run BEFORE set_mode so macOS picks it up for the
+        # actual window. Best-effort: the bundled seed may be missing.
+        try:
+            seed_icon = os.path.join(
+                _bundle_seed(), "assets", "icon_1024.png")
+            pygame.display.set_icon(pygame.image.load(seed_icon))
+        except (pygame.error, FileNotFoundError, OSError):
+            pass
         screen = pygame.display.set_mode((sw, sh))
         pygame.display.set_caption("The Way Out")
         # settings.FONT == "assets/gui/font/main_font.otf"; the frozen

@@ -9,10 +9,11 @@ Centralising this keeps exactly one copy of every RGB tuple and of the
 title / back-hint / hover primitives, so the screens cannot drift apart.
 """
 
+import os
 import random
 
 import pygame
-from settings import FONT
+from settings import FONT, TILE_SIZE
 
 # --- palette ---------------------------------------------------------
 BG      = (18, 18, 24)        # every screen fills this
@@ -115,6 +116,213 @@ def draw_bar(screen, rect, ratio, color, *, border=True):
     if border:
         pygame.draw.rect(screen, shade(BG, -6), rect, 2,
                          border_radius=4)
+
+
+def draw_toast(screen, text, font_, *, center_x, center_y,
+               fg=None, bg=None, border=None, pad_x=22, pad_y=10):
+    """Draw a small rounded toast box centred at ``(center_x, center_y)``.
+
+    Layout is computed from the font metrics so the toast can never
+    collide with siblings at other resolutions. Returns the drawn
+    ``pygame.Rect`` so the caller can place anything else relative to
+    it. ``fg`` defaults to ``ACCENT`` (the toast is the only screen
+    element using the gold accent for body text — short, high-priority,
+    transient).
+    """
+    if fg is None:
+        fg = ACCENT
+    if bg is None:
+        bg = shade(BG, +30)
+    if border is None:
+        border = LINE_C
+    surf = font_.render(text, True, fg)
+    box = surf.get_rect()
+    box.width += pad_x * 2
+    box.height += pad_y * 2
+    box.center = (center_x, center_y)
+    pygame.draw.rect(screen, bg, box, border_radius=6)
+    pygame.draw.rect(screen, border, box, 2, border_radius=6)
+    screen.blit(surf, surf.get_rect(center=box.center))
+    return box
+
+
+def _load_idle_frames(folder, scale):
+    """Split ``assets/units/<folder>/D_Idle.png`` into scaled frames.
+
+    Standalone of ``Character.load_assets`` so the menu scene can draw
+    ambient sprites without pulling the whole Character class (HP /
+    dash / projectile machinery). Returns ``[]`` if the sheet is
+    missing — caller skips the actor."""
+    path = os.path.join("assets", "units", folder, "D_Idle.png")
+    try:
+        sheet = pygame.image.load(path).convert_alpha()
+    except (pygame.error, FileNotFoundError):
+        return []
+    count = 4  # every unit sheet uses 4 idle frames (units.SPRITE_SHEETS)
+    fw = sheet.get_width() // count
+    fh = sheet.get_height()
+    out = []
+    for i in range(count):
+        sub = sheet.subsurface(pygame.Rect(i * fw, 0, fw, fh))
+        out.append(pygame.transform.scale(
+            sub, (int(fw * scale), int(fh * scale))))
+    return out
+
+
+class _MenuActor:
+    """Single wandering sprite used by :class:`MenuScene`.
+
+    No collision, no AI — just a position, a velocity that reflects at
+    screen edges, and an idle-loop frame index driven off the wall
+    clock (with a per-actor phase so the crowd doesn't blink in sync).
+    Right-facing frames are mirrored from left-facing at construction.
+    """
+
+    def __init__(self, frames, x, y, vx, vy, phase_ms):
+        self._frames_l = [pygame.transform.flip(f, True, False)
+                          for f in frames]
+        self._frames_r = list(frames)
+        self.x = float(x)
+        self.y = float(y)
+        self.vx = float(vx)
+        self.vy = float(vy)
+        self.phase_ms = int(phase_ms)
+
+    def update(self, dt, w, h):
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+        frame_w = self._frames_r[0].get_width()
+        frame_h = self._frames_r[0].get_height()
+        if self.x < frame_w * 0.5:
+            self.x = frame_w * 0.5
+            self.vx = abs(self.vx)
+        elif self.x > w - frame_w * 0.5:
+            self.x = w - frame_w * 0.5
+            self.vx = -abs(self.vx)
+        if self.y < frame_h * 0.5:
+            self.y = frame_h * 0.5
+            self.vy = abs(self.vy)
+        elif self.y > h - frame_h * 0.5:
+            self.y = h - frame_h * 0.5
+            self.vy = -abs(self.vy)
+
+    def draw(self, screen, ticks_ms):
+        frames = self._frames_l if self.vx < 0 else self._frames_r
+        idx = ((ticks_ms + self.phase_ms) // 160) % len(frames)
+        frame = frames[idx]
+        screen.blit(frame, frame.get_rect(center=(int(self.x), int(self.y))))
+
+
+class MenuScene:
+    """Ambient background for menu screens.
+
+    * A scrolling floor: one tile pre-baked into a slab the size of the
+      screen + one tile of overscan, blitted with a wrapped (ox, oy)
+      offset so the scroll is one blit per frame (not a per-tile grid).
+    * A handful of wandering character sprites (idle loop) that bounce
+      off the screen edges — keeps the title alive without lockstep
+      motion.
+    * A dark vignette on top so menu text stays readable regardless of
+      the underlying art.
+
+    Cheap enough to throw on every menu screen, but :class:`MainMenu`
+    is the primary user — submenus that need their stat card / list to
+    read clearly should stay on the quieter :class:`PixelDust`.
+    """
+
+    # Diagonal scroll velocity (px/s) for the floor slab.
+    SCROLL_VX = 18
+    SCROLL_VY = 12
+    # Vignette darkness — alpha over BG. Tuned so ACCENT-gold title text
+    # still pops; raise toward 160 if a particular screen needs more.
+    VIGNETTE_ALPHA = 110
+
+    _FOLDERS = ("wizard", "penguin", "elf", "shiggy", "wolf", "mrgreen",
+                "orange")
+
+    def __init__(self, width, height, *, actor_count=6, seed=23,
+                 floor_tile="Tile_42", actor_scale=2):
+        self.width = width
+        self.height = height
+        self._rng = random.Random(seed)
+        self._t0 = pygame.time.get_ticks()
+        self._last_ms = self._t0
+        self._slab = self._build_slab(floor_tile)
+        self._vignette = self._build_vignette()
+        self.actors = self._build_actors(actor_count, actor_scale)
+
+    def _build_slab(self, floor_tile):
+        """Pre-render one screen-plus-overscan slab of the floor tile.
+
+        Falls back to a flat BG fill if the tile asset is missing — the
+        scene still works (vignette + actors over a flat panel) instead
+        of crashing on the title screen."""
+        ts = TILE_SIZE
+        cols = self.width // ts + 2
+        rows = self.height // ts + 2
+        slab = pygame.Surface((cols * ts, rows * ts))
+        slab.fill(BG)
+        path = os.path.join("assets", "tileset", "tiles",
+                            floor_tile + ".png")
+        try:
+            raw = pygame.image.load(path).convert_alpha()
+            tile_img = pygame.transform.scale(raw, (ts, ts))
+        except (pygame.error, FileNotFoundError):
+            return slab
+        # Tone the tile down so it sits behind the UI rather than
+        # competing with it: blit the tile, then a dark wash over the
+        # whole slab.
+        for r in range(rows):
+            for c in range(cols):
+                slab.blit(tile_img, (c * ts, r * ts))
+        wash = pygame.Surface(slab.get_size(), pygame.SRCALPHA)
+        wash.fill((*BG, 90))
+        slab.blit(wash, (0, 0))
+        return slab
+
+    def _build_vignette(self):
+        v = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        v.fill((*BG, self.VIGNETTE_ALPHA))
+        return v
+
+    def _build_actors(self, count, scale):
+        actors = []
+        folders = list(self._FOLDERS)
+        self._rng.shuffle(folders)
+        for i in range(count):
+            folder = folders[i % len(folders)]
+            frames = _load_idle_frames(folder, scale)
+            if not frames:
+                continue
+            x = self._rng.uniform(80, self.width - 80)
+            y = self._rng.uniform(80, self.height - 80)
+            angle = self._rng.uniform(0, 6.2831853)
+            speed = self._rng.uniform(30, 70)
+            vx = speed * pygame.math.Vector2(1, 0).rotate_rad(angle).x
+            vy = speed * pygame.math.Vector2(1, 0).rotate_rad(angle).y
+            phase = self._rng.randint(0, 600)
+            actors.append(_MenuActor(frames, x, y, vx, vy, phase))
+        return actors
+
+    def draw(self, screen):
+        now = pygame.time.get_ticks()
+        dt = min(0.1, (now - self._last_ms) / 1000.0)
+        self._last_ms = now
+        t = (now - self._t0) / 1000.0
+        slab_w = self._slab.get_width()
+        slab_h = self._slab.get_height()
+        ox = int(t * self.SCROLL_VX) % slab_w
+        oy = int(t * self.SCROLL_VY) % slab_h
+        # Blit slab tiled with wrap: one base copy, then three offset
+        # copies cover any gap from the modulo offset.
+        screen.blit(self._slab, (-ox, -oy))
+        screen.blit(self._slab, (slab_w - ox, -oy))
+        screen.blit(self._slab, (-ox, slab_h - oy))
+        screen.blit(self._slab, (slab_w - ox, slab_h - oy))
+        for actor in self.actors:
+            actor.update(dt, self.width, self.height)
+            actor.draw(screen, now)
+        screen.blit(self._vignette, (0, 0))
 
 
 class PixelDust:

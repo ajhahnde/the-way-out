@@ -5,8 +5,7 @@ __pycache__/
 # MacOS Bin
 .DS_Store
 
-# Python virtualenvs (arm64 build env -> build_mac.sh;
-# x86_64 cross-build env .venv-intel -> build_mac_intel.sh)
+.ruff_cache
 venv/
 .venv/
 .venv-intel/
@@ -21,7 +20,6 @@ assets/background/test_bg_2.png
 ajhahnde/
 
 
-# PyInstaller build output (the self-updating Mac launcher)
 build/
 dist/
 *.spec

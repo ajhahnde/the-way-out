@@ -22,8 +22,13 @@ class MainMenu:
         self.font = theme.font(46)
         self.title_font = theme.font(78)
         self.small_font = theme.font(24)
-        # Set by main.py's update flow; drawn under the tip line.
+        # Set by main.py's update flow; drawn as a toast under the
+        # title. status_until is the wall-clock time (seconds, from
+        # pygame.time.get_ticks) at which main.py should clear the
+        # status — animated phases (the dots) set it to None to opt out
+        # of the auto-dismiss, results set it to ~4 s out.
         self.status = ""
+        self.status_until = None
 
         self.buttons = [
             {"text": "Levels", "rect": None, "action": "lvls"},
@@ -42,18 +47,45 @@ class MainMenu:
             rect.center = (center_x, start_y + i * 90)
             btn["rect"] = rect
 
-        # Slow pixel-dust drifting upward — keeps the title screen alive
-        # without competing with the menu (matches the pixel aesthetic).
-        self.dust = theme.PixelDust(width, height, seed=7, count=60)
+        self.title_center_y = height // 2 - 210
+        # Toast sits between title-bottom and first-button-top so it
+        # cannot collide with QUIT or the tip line at any resolution.
+        title_bottom = (self.title_center_y
+                        + self.title_font.get_height() // 2)
+        first_btn_top = self.buttons[0]["rect"].top
+        self._toast_y = (title_bottom + first_btn_top) // 2
+
+        # Ambient background: scrolling floor + wandering sprites +
+        # vignette. Replaces the prior PixelDust on the title screen.
+        self.scene = theme.MenuScene(width, height, seed=7)
+
+    def set_status(self, text, ttl=4.0):
+        """Set the toast text. ``ttl`` is seconds until main.py clears
+        it; pass ``None`` for a status that should persist (animated
+        phases overwrite themselves every frame instead)."""
+        self.status = text
+        if ttl is None:
+            self.status_until = None
+        else:
+            self.status_until = pygame.time.get_ticks() / 1000.0 + ttl
+
+    def clear_status(self):
+        self.status = ""
+        self.status_until = None
 
     def draw(self, screen):
         screen.fill(BG)
-        self.dust.draw(screen)
+        self.scene.draw(screen)
         mouse_pos = pygame.mouse.get_pos()
 
         title = self.title_font.render("THE WAY OUT", True, TITLE_C)
         screen.blit(title, title.get_rect(
-            center=(self.width // 2, self.height // 2 - 210)))
+            center=(self.width // 2, self.title_center_y)))
+
+        if self.status:
+            theme.draw_toast(
+                screen, self.status, self.small_font,
+                center_x=self.width // 2, center_y=self._toast_y)
 
         for btn in self.buttons:
             is_hovered = btn["rect"].collidepoint(mouse_pos)
@@ -76,13 +108,6 @@ class MainMenu:
             True, MUTED)
         screen.blit(tip, tip.get_rect(
             center=(self.width // 2, self.height - 58)))
-
-        if self.status:
-            # INK, not ACCENT: the gold accent is too low-contrast for a
-            # full line of small text on the dark background.
-            status_surf = self.small_font.render(self.status, True, INK)
-            screen.blit(status_surf, status_surf.get_rect(
-                center=(self.width // 2, self.height - 98)))
 
     def handle_input(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -352,18 +377,29 @@ class CharacterMenu:
             rect.midleft = (self.name_x, start_y + i * 100)
             btn["rect"] = rect
 
-        # One idle sprite per character, shown left of the list on hover.
+        # Two scaled idle-frame lists per character:
+        #  * ``previews``: 220 px hero, used by the focused row only.
+        #  * ``thumbs``:    64 px badge, drawn next to every row so the
+        #                   whole list animates instead of standing
+        #                   still everywhere except the focus.
         self.previews = {}
+        self.thumbs = {}
         for key, cls, label, tagline in CHARACTER_INFO:
-            self.previews[key] = self._load_preview(cls)
+            self.previews[key] = self._load_idle_frames(cls, 220)
+            self.thumbs[key] = self._load_idle_frames(cls, 72)
 
         # Idle motion — quieter than the title screen so it doesn't
         # compete with the stat block on the right.
         self.dust = theme.PixelDust(width, height, seed=17, count=30)
 
-    def _load_preview(self, cls):
-        """Every idle frame, scaled — the hovered character loops its
-        idle animation instead of standing on a single frame."""
+    def _load_idle_frames(self, cls, target_h):
+        """Every idle frame, scaled to ``target_h`` px tall.
+
+        Used twice per character: once for the focused-row hero
+        preview, once for the per-row thumbnail so every figure in the
+        list loops its idle instead of sitting on a static name.
+        Returns ``None`` if the sheet is missing — callers skip the
+        blit, and the row just shows the name."""
         try:
             sheet = pygame.image.load(
                 f"assets/units/{cls.asset_folder}/D_Idle.png").convert_alpha()
@@ -372,7 +408,6 @@ class CharacterMenu:
         _, count = cls.SPRITE_SHEETS['idle_down']
         fw = sheet.get_width() // count
         fh = sheet.get_height()
-        target_h = 220
         scale = target_h / fh
         size = (int(fw * scale), int(fh * scale))
         return [
@@ -402,7 +437,8 @@ class CharacterMenu:
                     focus = btn
                     break
 
-        for btn in self.character:
+        ticks = pygame.time.get_ticks()
+        for i, btn in enumerate(self.character):
             is_hovered = btn["rect"].collidepoint(mouse_pos)
 
             if btn["action"] == current_selected:
@@ -421,12 +457,27 @@ class CharacterMenu:
             screen.blit(tag, tag.get_rect(
                 topleft=(btn["rect"].left, btn["rect"].bottom + 4)))
 
+            # Per-row idle thumbnail — every character animates. Skip
+            # the focused row: it gets the bigger hero sprite drawn
+            # below, and a duplicate thumb beside the name would compete
+            # with the stat-card column.
+            is_focus = focus is not None and btn["action"] == focus["action"]
+            if not is_focus:
+                thumbs = self.thumbs.get(btn["action"])
+                if thumbs:
+                    # Stagger frame index per row so they don't blink in
+                    # sync. ~7 fps idle loop.
+                    idx = (ticks // 140 + i * 2) % len(thumbs)
+                    frame = thumbs[idx]
+                    screen.blit(frame, frame.get_rect(
+                        center=(self.name_x - 60, btn["rect"].centery)))
+
         if focus is not None:
             frames = self.previews.get(focus["action"])
             if frames:
                 # ~7 fps idle loop, timed off the wall clock so this
                 # screen doesn't need a dt plumbed in just for the sprite.
-                frame = frames[(pygame.time.get_ticks() // 140) % len(frames)]
+                frame = frames[(ticks // 140) % len(frames)]
                 pcx = self.name_x - 170
                 pcy = self.height // 2
                 screen.blit(frame, frame.get_rect(center=(pcx, pcy)))

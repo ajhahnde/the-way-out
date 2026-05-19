@@ -1,5 +1,6 @@
 import math
 import random
+import zlib
 from collections import deque
 
 import pygame
@@ -7,7 +8,7 @@ from settings import (
     TILE_SIZE, BOSS_TOUCH_DAMAGE, PLAYER_INVULN_TIME,
     SPIKE_DAMAGE, LEVER_REACH, DASH_COOLDOWN,
 )
-from units import Wizard, Boss, CHARACTER_INFO, ENEMY_INFO
+from units import Wizard, Boss, BOSS_ROSTER, CHARACTER_INFO, ENEMY_INFO
 from static_objects import Tile, TileTextures, Prop
 from interactables import Spikes, Lever, Gate, KeyItem, PressurePlate
 from tiles import PROP_CHARS
@@ -193,6 +194,9 @@ class LevelManager:
         self.level_id = ""
         self.level_title = ""
         self.level_tagline = ""
+        self.boss_name = ""
+        self.boss_asset = None
+        self.boss_tint = None
 
         self.player = None
         self.boss = None
@@ -331,6 +335,13 @@ class LevelManager:
         self.arena_rect = None
         self._e_was_down = False
         self._last_boss_hp = None
+        # Pick the general for this level deterministically from the
+        # level id. zlib.crc32 (not Python's built-in hash) so the
+        # choice is stable across game restarts, not just retries —
+        # PYTHONHASHSEED randomises hash() per process.
+        seed = zlib.crc32(entry.id.encode("utf-8"))
+        self.boss_name, self.boss_asset, self.boss_tint = \
+            BOSS_ROSTER[seed % len(BOSS_ROSTER)]
 
         try:
             with open(entry.file, 'r') as f:
@@ -546,7 +557,10 @@ class LevelManager:
             self.boss = Boss(
                 bx, by, self.obstacle_sprites, target=self.player,
                 projectile_group=self.projectile_sprites,
-                projectile_targets=self.player_sprites)
+                projectile_targets=self.player_sprites,
+                display_name=self.boss_name,
+                asset_folder=self.boss_asset,
+                identity_tint=self.boss_tint)
             self.entities.add(self.boss)
             self.enemy_sprites.add(self.boss)
             self._last_boss_hp = self.boss.hp
@@ -914,14 +928,15 @@ class LevelManager:
             badge = self.label_font.render(state_text, True, badge_col)
             screen.blit(badge, badge.get_rect(
                 center=(self.width // 2, y + h + 24)))
-        label = self.label_font.render("MR. GREEN", True, theme.INK)
+        label = self.label_font.render(
+            self.boss_name.upper(), True, theme.INK)
         screen.blit(label, label.get_rect(center=(self.width // 2, y - 24)))
 
     def _draw_objective(self, screen):
         if self.completed or self.failed:
             return
         if self.boss is not None:
-            text, color = "Defeat Mr. Green!", theme.FAIL
+            text, color = f"Defeat {self.boss_name}!", theme.FAIL
         elif self.has_boss and not self.boss_defeated:
             if any(not lv.activated for lv in self.levers):
                 text, color = ("Pull the levers — the way is sealed",
@@ -930,7 +945,7 @@ class LevelManager:
                 text, color = ("Step on the plates — the way is sealed",
                                theme.ACCENT)
             else:
-                text, color = ("Mr. Green guards the final hall",
+                text, color = (f"{self.boss_name} guards the final hall",
                                theme.ACCENT)
         elif any(not p.activated for p in self.plates):
             text, color = ("Step on the pressure plates",

@@ -108,8 +108,9 @@ def _build_registry():
 
     # --- enemies --------------------------------------------------------
     reg['B'] = TileSpec(
-        'B', "Boss (Mr. Green)", 'enemy',
-        "Spawns lazily the first time the player enters its arena.")
+        'B', "Boss (random general)", 'enemy',
+        "Spawns lazily the first time the player enters its arena. "
+        "Identity is picked deterministically from the level id.")
     # Generic enemies are derived from units.ENEMY_INFO so adding one
     # there makes it appear in the editor palette automatically.
     for ch, _cls, label in ENEMY_INFO:

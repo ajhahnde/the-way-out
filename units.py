@@ -428,6 +428,22 @@ CHARACTER_INFO = [
 ]
 
 
+# Pool of "generals" the level picks one of as its boss. Mechanics are
+# identical (one Boss class) — only the name, sprite folder and a
+# subtle identity overlay change so each level feels distinct. The
+# fourth tuple element is an optional RGBA tint baked into every loaded
+# frame once at boss init, so the telegraph (red/gold) still sits on
+# top during attack windups without fighting a per-frame identity
+# overlay.
+BOSS_ROSTER = [
+    ("Mr. Green",  "mrgreen", None),
+    ("Mr. Orange", "orange",  (180, 90, 30, 70)),
+    ("Gen. Frost", "penguin", (60, 120, 210, 90)),
+    ("The Archer", "elf",     (70, 180, 90, 90)),
+    ("Mr. Shadow", "shiggy",  (90, 40, 140, 90)),
+]
+
+
 # --- boss --------------------------------------------------------------
 
 class Boss(Character):
@@ -446,7 +462,16 @@ class Boss(Character):
     max_hp = BOSS_MAX_HP
 
     def __init__(self, x, y, obstacle_sprites=None, target=None,
-                 projectile_group=None, projectile_targets=None):
+                 projectile_group=None, projectile_targets=None,
+                 *, display_name="Mr. Green", asset_folder=None,
+                 identity_tint=None):
+        # Set instance asset_folder + identity_tint BEFORE super so
+        # Character.load_assets reads the chosen sprite folder and the
+        # overridden load_assets below bakes the tint in.
+        if asset_folder is not None:
+            self.asset_folder = asset_folder
+        self.identity_tint = identity_tint
+        self.display_name = display_name
         super().__init__(x, y, obstacle_sprites)
         self.target = target
         # The level wires these so phase 2 can spawn boss projectiles
@@ -458,6 +483,19 @@ class Boss(Character):
         self.state_timer = random.uniform(
             BOSS_CHASE_TIME_MIN, BOSS_CHASE_TIME_MAX)
         self.dash_dir = pygame.math.Vector2(0, 1)
+
+    def load_assets(self):
+        # Bake identity_tint into every frame once at init so the
+        # telegraph tint (red/gold during windup/aim) still overlays
+        # cleanly on top without a per-frame swap that pops between
+        # neutral and tinted between attacks.
+        super().load_assets()
+        if self.identity_tint is None:
+            return
+        for status, frames in self.animations.items():
+            self.animations[status] = [
+                self._apply_overlay(f, self.identity_tint) for f in frames
+            ]
 
     def get_input(self):
         if self.target is None or self.target.hp <= 0 or self.hp <= 0:
