@@ -81,6 +81,10 @@ def _error_screen(lines):
                 if (e.type == pygame.KEYDOWN
                         and e.key == pygame.K_ESCAPE):
                     running = False
+                if (e.type == pygame.KEYDOWN
+                        and e.key == pygame.K_q
+                        and (e.mod & pygame.KMOD_META)):
+                    running = False
             # Hand-synced copies of theme.BG / theme.INK — the frozen
             # launcher runs before the game's own modules are on the
             # path, so it can't import theme.py. Keep these two tuples

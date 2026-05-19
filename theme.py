@@ -27,8 +27,9 @@ LINE_C  = (52, 54, 66)        # separators, bar tracks
 SUCCESS = (120, 220, 150)     # win / level complete
 FAIL    = (220, 96, 96)       # lose / defeat / danger
 
-# One glyph for every "·" hint separator / bullet across the game.
-HINT_DOT = "·"
+# One glyph for every hint separator / bullet across the game. Kept
+# to chars present in main_font.otf — "·" renders as the .notdef box.
+HINT_DOT = "|"
 
 
 def shade(color, delta):

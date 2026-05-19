@@ -108,7 +108,7 @@ class MainMenu:
         d = theme.HINT_DOT
         tip = theme.text_surface(
             self.small_font,
-            f"WASD/Arrows move & aim   {d}   Space shoot   {d}   "
+            f"WASD/Arrows move + aim   {d}   Space shoot   {d}   "
             f"Shift dash   {d}   E use",
             MUTED)
         screen.blit(tip, tip.get_rect(
@@ -159,7 +159,7 @@ class SettingsMenu:
 
     def update_buttons(self):
         sound_text = f"Sound: {'ON' if self.sound_on else 'OFF'}"
-        music_text = f"Music: {int(round(self.music_vol * 100))}%"
+        music_text = f"Music: {int(round(self.music_vol * 100))}/100"
         screen_text = (
             f"Screen: {'FULLSCREEN' if self.toggle_screen else 'BORDERED'}")
 
@@ -317,7 +317,7 @@ class LevelMenu:
             tag = btn["tagline"]
             if btn["custom"]:
                 # No pill — a quiet prefix keeps the row flat.
-                tag = f"custom · {tag}"
+                tag = f"custom | {tag}"
             tag_surf = theme.text_surface(
                 self.tag_font, tag,
                 MUTED if not is_done else theme.shade(DONE_C, -30))

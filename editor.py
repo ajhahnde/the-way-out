@@ -287,7 +287,8 @@ class LevelEditor:
                                             & pygame.KMOD_CTRL):
                 self._do_save()
                 return None
-            if event.key == pygame.K_q:
+            if event.key == pygame.K_q and not (
+                    pygame.key.get_mods() & pygame.KMOD_META):
                 self.tool = 'pick' if self.tool == 'paint' else 'paint'
                 return None
 

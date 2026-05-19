@@ -171,6 +171,15 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+        # Cmd+Q (macOS): quit immediately from any state. Handled here
+        # before per-state delegation so the editor's bare-Q tool toggle
+        # (editor.py) can't consume it on the way out.
+        if (event.type == pygame.KEYDOWN
+                and event.key == pygame.K_q
+                and (event.mod & pygame.KMOD_META)):
+            running = False
+            continue
+
         # Losing focus while fullscreen (Cmd-Tab, Mission Control, a
         # notification) makes SDL freeze key state: get_pressed() keeps
         # reporting the last-held key, so the player would run on

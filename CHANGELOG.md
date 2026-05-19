@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## v0.2.6
+
+A small polish release: two missing-glyph fixes in the UI and a
+proper macOS Cmd+Q shortcut. No save-file format changes.
+
+### UI
+
+- Main-menu hint bar: replaced `&` and the three `·` separators with
+  characters the bundled pixel font actually has glyphs for, so the
+  bar now reads `WASD/Arrows move + aim | Space shoot | Shift dash |
+  E use` instead of showing `?` boxes.
+- Settings: the music level now reads `Music: 25/100` (etc.) — the
+  previous `%` rendered as a `?` because the font has no percent
+  glyph.
+
+### Input
+
+- Cmd+Q now quits the game instantly from every screen on macOS,
+  matching standard system behaviour. Bare `Q` in the editor still
+  toggles the paint/pick tool — it just ignores the keystroke when
+  the Command key is held.
+
 ## v0.2.3
 
 An icon-polish release. No save-file format changes; existing saves
