@@ -302,7 +302,9 @@ class LevelEditor:
                         self._box_start = cell
                         self._box_erase = False
                         return None
-                self._click_left(mx, my)
+                result = self._click_left(mx, my)
+                if result is not None:
+                    return result
             elif event.button == 3:
                 self._mouse_buttons[2] = True
                 if shift and self.canvas_rect.collidepoint(mx, my):
@@ -364,7 +366,12 @@ class LevelEditor:
                     if name == 'save':
                         self._do_save()
                     elif name == 'test':
-                        self._do_test()
+                        # Propagate 'test' out so handle_input can
+                        # return it to main — without this the
+                        # toolbar Test button silently saves but
+                        # never launches a test session (F5 worked
+                        # because it returned _do_test() directly).
+                        return self._do_test()
                     elif name == 'clear':
                         self.new_level(self.cols, self.rows, self.name)
                         self._flash("Cleared")

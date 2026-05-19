@@ -211,10 +211,17 @@ while running:
                 and event.type == pygame.KEYDOWN):
             if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 _leave_game()
+                # Same reasoning as the Esc-finished branch above:
+                # consume the key so it can't also drive
+                # editor.handle_input on a return_state == "editor"
+                # session (Enter would commit a half-typed level
+                # name, R would append 'r' to it).
+                continue
             elif event.key == pygame.K_r:
                 if not level_manager.load_level(
                         level_manager.level_id, current_character):
                     _leave_game()
+                    continue
 
         # Main menu
         if game_state == "menu":

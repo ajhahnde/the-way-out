@@ -25,6 +25,10 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))  # run from anywhere: find settings/theme
+import settings  # noqa: E402
+import theme  # noqa: E402
+
 ASSETS = REPO / "assets"
 OUT_PNG = ASSETS / "icon_1024.png"
 OUT_ICNS = ASSETS / "icon.icns"
@@ -102,49 +106,75 @@ def build_icon() -> None:
     canvas = pygame.Surface((CANVAS, CANVAS), pygame.SRCALPHA)
     canvas.fill((0, 0, 0, 255))
 
-    # Warm glow behind the door — single soft layer with normal alpha
-    # blending (NOT additive — stacked ADDs blow out to white).
+    # Warm glow centred on the canvas — the wordmark sits in the light.
+    # Single soft layer, normal alpha blend (NOT additive — stacked ADDs
+    # blow out to white).
     glow = _radial_gradient(
-        CANVAS, CANVAS // 2, 540,
+        CANVAS, CANVAS // 2, CANVAS // 2,
         inner_color=(255, 200, 110, 255),
         outer_color=(20, 8, 0, 0),
         inner_frac=0.0, outer_frac=0.55, power=1.7,
     )
     canvas.blit(glow, (0, 0))
 
-    # Door (36x36 frame x22 = 792 px), rotated 90° so it reads as an
-    # upright doorway rather than a top-down floor tile.
-    door_sheet = pygame.image.load(str(DOOR_SHEET)).convert_alpha()
-    door = _first_frame(door_sheet)
-    door = pygame.transform.rotate(door, 90)
-    door = _integer_scale(door, 22)
-    dw, dh = door.get_size()
-    door_x = CANVAS // 2 - dw // 2
-    door_y = 90
-    canvas.blit(door, (door_x, door_y))
+    # Wordmark: lowercase "two" (short for The Way Out) in the game
+    # font, rotated 90° clockwise so it reads top->bottom (t, w, o).
+    # Each glyph is rendered, trimmed to its inked pixels (optical
+    # centering — not the font's line box), rotated, then stacked with
+    # explicit tracking. Separate glyphs + a real gap keep the letters
+    # distinct when the icon is shrunk to ~32 px (font-kerned "two"
+    # merges into a bar at that size) and match the spaced sketch.
+    font = pygame.font.Font(str(REPO / settings.FONT), 600)
+    glyphs = []
+    for ch_ in "two":
+        g = font.render(ch_, True, theme.TITLE_C)
+        g = g.subsurface(g.get_bounding_rect()).copy()
+        # -90 deg = clockwise in pygame: a glyph's left edge goes to the
+        # top, so the row t,w,o stacks top->bottom. 90 deg multiples
+        # rotate exactly (no blur).
+        glyphs.append(pygame.transform.rotate(g, -90))
 
-    # Warm floor pool right at the door threshold — small additive
-    # accent so the wizard reads as standing in the doorway's light.
-    pool = _radial_gradient(
-        CANVAS, CANVAS // 2, 920,
-        inner_color=(255, 215, 140, 120),
-        outer_color=(255, 160, 60, 0),
-        inner_frac=0.0, outer_frac=0.25, power=1.4,
-    )
-    canvas.blit(pool, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+    gap = round(0.22 * sum(g.get_height() for g in glyphs) / len(glyphs))
+    stack_w = max(g.get_width() for g in glyphs)
+    stack_h = sum(g.get_height() for g in glyphs) + gap * (len(glyphs) - 1)
+    mark = pygame.Surface((stack_w, stack_h), pygame.SRCALPHA)
+    y = 0
+    for g in glyphs:
+        mark.blit(g, ((stack_w - g.get_width()) // 2, y))
+        y += g.get_height() + gap
 
-    # Wizard (32x32 frame x18 = 576 px) in front of the door.
-    wiz_sheet = pygame.image.load(str(WIZARD_SHEET)).convert_alpha()
-    wiz = _first_frame(wiz_sheet)
-    wiz = _integer_scale(wiz, 18)
-    ww, wh = wiz.get_size()
-    canvas.blit(wiz, (CANVAS // 2 - ww // 2, 940 - wh))
+    # Fit inside the squircle-mask safe area: cap height, and width too
+    # so a wide render can't overflow either edge.
+    mw, mh = mark.get_size()
+    scale = (CANVAS * 0.62) / mh
+    if mw * scale > CANVAS * 0.5:
+        scale = (CANVAS * 0.5) / mw
+    mark = pygame.transform.smoothscale(
+        mark, (max(1, round(mw * scale)), max(1, round(mh * scale))))
+    center = (CANVAS // 2, CANVAS // 2)
+
+    # Seating halo: a soft dark silhouette behind the cream so it keeps
+    # contrast on the bright glow even shrunk to ~32 px. RGBA_MULT by
+    # (0,0,0,90) zeros RGB and drops alpha to ~35% in one pass; the
+    # 1.04x upscale + smoothscale softens it into a halo.
+    halo = mark.copy()
+    halo.fill((0, 0, 0, 90), special_flags=pygame.BLEND_RGBA_MULT)
+    halo = pygame.transform.smoothscale(
+        halo, (round(halo.get_width() * 1.04),
+               round(halo.get_height() * 1.04)))
+    canvas.blit(halo, halo.get_rect(center=center))
+    canvas.blit(mark, mark.get_rect(center=center))
 
     # Vignette: corners fade to pure black, centre untouched.
     canvas.blit(_vignette(CANVAS), (0, 0))
 
+    # Flatten onto an opaque surface — Apple icons must carry no alpha.
+    out = pygame.Surface((CANVAS, CANVAS))
+    out.fill((0, 0, 0))
+    out.blit(canvas, (0, 0))
+
     OUT_PNG.parent.mkdir(parents=True, exist_ok=True)
-    pygame.image.save(canvas, str(OUT_PNG))
+    pygame.image.save(out, str(OUT_PNG))
     print(f"wrote {OUT_PNG.relative_to(REPO)}")
 
 

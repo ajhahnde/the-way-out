@@ -4,7 +4,7 @@ A top-down pixel-art escape-room shooter. Pick a character, fight your
 way through locked rooms, work the levers and pressure plates, and find
 the way out.
 
-**Version:** v0.2.0 — see [Release Notes](RELEASE_NOTES.md)
+**Version:** v0.2.2 — see [Changelog](CHANGELOG.md)
 
 ## Play
 
@@ -59,3 +59,8 @@ in-game editor (`editor.py`) edits them live.
 
 The app self-updates from this repository on launch via `updater.py`;
 save data lives outside the app bundle and is never touched by updates.
+
+## Versioning
+
+Semantic versioning (`vMAJOR.MINOR.PATCH`); each release is a single
+annotated git tag. See [`CHANGELOG.md`](CHANGELOG.md) for the history.
