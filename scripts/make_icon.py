@@ -118,21 +118,18 @@ def build_icon() -> None:
     canvas.blit(glow, (0, 0))
 
     # Wordmark: lowercase "two" (short for The Way Out) in the game
-    # font, rotated 90° clockwise so it reads top->bottom (t, w, o).
-    # Each glyph is rendered, trimmed to its inked pixels (optical
-    # centering — not the font's line box), rotated, then stacked with
-    # explicit tracking. Separate glyphs + a real gap keep the letters
-    # distinct when the icon is shrunk to ~32 px (font-kerned "two"
-    # merges into a bar at that size) and match the spaced sketch.
+    # font, set vertically the way Mandarin is written — each glyph
+    # upright (NOT rotated), stacked top->bottom (t, w, o). Each glyph
+    # is rendered, trimmed to its inked pixels (optical centering — not
+    # the font's line box), then stacked with explicit tracking.
+    # Separate glyphs + a real gap keep the letters distinct when the
+    # icon is shrunk to ~32 px (font-kerned "two" merges into a bar at
+    # that size) and match the spaced sketch.
     font = pygame.font.Font(str(REPO / settings.FONT), 600)
     glyphs = []
     for ch_ in "two":
         g = font.render(ch_, True, theme.TITLE_C)
-        g = g.subsurface(g.get_bounding_rect()).copy()
-        # -90 deg = clockwise in pygame: a glyph's left edge goes to the
-        # top, so the row t,w,o stacks top->bottom. 90 deg multiples
-        # rotate exactly (no blur).
-        glyphs.append(pygame.transform.rotate(g, -90))
+        glyphs.append(g.subsurface(g.get_bounding_rect()).copy())
 
     gap = round(0.22 * sum(g.get_height() for g in glyphs) / len(glyphs))
     stack_w = max(g.get_width() for g in glyphs)
