@@ -60,6 +60,78 @@ class MainMenu:
         # vignette. Replaces the prior PixelDust on the title screen.
         self.scene = theme.MenuScene(width, height, seed=7)
 
+        # Playable avatar overlay (AC-style loading screen). The
+        # wandering MenuScene actors stay non-interactive — they have no
+        # hitbox and aren't in any group, so the player walks through
+        # them and shots can't hit them. Bounds are enforced by a
+        # screen-rect clamp in update(); walls/targets are empty groups.
+        self._character_classes = {
+            key: cls for key, cls, _label, _tag in CHARACTER_INFO}
+        self.world_obstacles = pygame.sprite.Group()
+        self.projectile_targets = pygame.sprite.Group()
+        self.projectile_group = pygame.sprite.Group()
+        self.player = None
+        self._spawn_player("c_wiz")
+
+    def _spawn_player(self, key):
+        cls = self._character_classes.get(key)
+        if cls is None:
+            return
+        # Bottom-center, well clear of the title and buttons. The clamp
+        # in update() keeps the player on screen no matter the spawn.
+        spawn_x = self.width // 2
+        spawn_y = self.height - 220
+        self.player = cls(spawn_x, spawn_y, self.world_obstacles)
+        # Center the sprite on the requested spawn point.
+        self.player.rect.center = (spawn_x, spawn_y)
+        self.player.pos.update(self.player.rect.topleft)
+        self.player.hitbox.center = self.player.rect.center
+        self.player.projectile_group = self.projectile_group
+        self.player.projectile_targets = self.projectile_targets
+        # Left mouse must stay reserved for clicking menu buttons.
+        self.player.attack_mouse_enabled = False
+        self.current_character_key = key
+
+    def set_character(self, key):
+        """Rebuild the menu avatar when CharacterMenu picks a new one."""
+        if key == getattr(self, "current_character_key", None):
+            return
+        for shot in list(self.projectile_group):
+            shot.kill()
+        self._spawn_player(key)
+
+    def update(self, dt):
+        if self.player is None:
+            return
+        self.player.update(dt)
+        self.projectile_group.update(dt)
+
+        # Clamp the player to the screen rect. The level's wall-collide
+        # path is unavailable here (no walls), so cap pos/rect/hitbox
+        # together to keep the sprite, draw rect and shot-spawn point in
+        # sync.
+        rect = self.player.rect
+        max_x = self.width - rect.width
+        max_y = self.height - rect.height
+        if self.player.pos.x < 0:
+            self.player.pos.x = 0
+        elif self.player.pos.x > max_x:
+            self.player.pos.x = max_x
+        if self.player.pos.y < 0:
+            self.player.pos.y = 0
+        elif self.player.pos.y > max_y:
+            self.player.pos.y = max_y
+        rect.topleft = (round(self.player.pos.x), round(self.player.pos.y))
+        self.player.hitbox.center = rect.center
+
+        # Prune shots that left the screen; Projectile.update would
+        # eventually drop them via PROJECTILE_LIFETIME, but clearing
+        # off-screen orbs early keeps the group tight.
+        screen_rect = pygame.Rect(0, 0, self.width, self.height)
+        for shot in list(self.projectile_group):
+            if not screen_rect.colliderect(shot.rect):
+                shot.kill()
+
     def set_status(self, text, ttl=4.0):
         """Set the toast text. ``ttl`` is seconds until main.py clears
         it; pass ``None`` for a status that should persist (animated
@@ -80,6 +152,14 @@ class MainMenu:
         # work (submenus keep theirs — PixelDust is sparse, does not
         # cover the screen).
         self.scene.draw(screen)
+
+        # AC-style loading-screen overlay: shots under the player, both
+        # above the scene and below the title/buttons so the UI stays
+        # readable and clickable.
+        self.projectile_group.draw(screen)
+        if self.player is not None:
+            screen.blit(self.player.image, self.player.rect)
+
         mouse_pos = pygame.mouse.get_pos()
 
         title = theme.text_surface(self.title_font, "THE WAY OUT", TITLE_C)

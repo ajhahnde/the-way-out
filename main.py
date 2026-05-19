@@ -293,6 +293,7 @@ while running:
             action = character_menu.handle_input(event)
             if action:
                 current_character = action
+                main_menu.set_character(current_character)
                 game_state = "menu"
 
         # Levels select — action is the chosen level id (from catalog).
@@ -341,10 +342,12 @@ while running:
 
     # Draw & Update --------------------------------------------------
     if game_state == "menu":
+        main_menu.update(dt)
         main_menu.draw(screen)
     elif game_state == "updating":
         update_anim_t += dt
         result = update_state["result"]
+        main_menu.update(dt)
         if result == "done":
             main_menu.set_status("Updated - restarting...", ttl=None)
             main_menu.draw(screen)

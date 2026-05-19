@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v0.2.7
+
+A playable title screen, in the style of an Assassin's Creed loading
+screen. No save-file format changes; existing saves load as-is.
+
+### Title screen
+
+- The main menu is now playable: your selected character spawns on
+  the title screen and can be moved (WASD/Arrows), dashed (Shift) and
+  fired (Space) while the menu buttons stay clickable. The camera does
+  not move — the avatar is confined to the window.
+- The wandering background figures are purely decorative ghosts: the
+  player walks through them, projectiles pass through them, and they
+  never attack or react.
+- Left mouse no longer fires on the title screen so clicks only
+  operate the menu buttons; in-game, left mouse still shoots as
+  before.
+- Picking a different character in the Characters menu immediately
+  updates the avatar shown on the title screen.
+
 ## v0.2.6
 
 A small polish release: two missing-glyph fixes in the UI and a

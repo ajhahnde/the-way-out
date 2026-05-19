@@ -46,6 +46,11 @@ class Character(pygame.sprite.Sprite):
     attack_damage = PROJECTILE_DAMAGE
     attack_cooldown = ATTACK_COOLDOWN
 
+    # When False, left mouse no longer triggers an attack — only Space
+    # fires. The main-menu's playable avatar sets this off so clicks on
+    # buttons don't double as shots; gameplay keeps the default.
+    attack_mouse_enabled = True
+
     # name -> frame count in the sprite sheet
     SPRITE_SHEETS = {
         'idle_down': ('D_Idle', 4),
@@ -259,7 +264,8 @@ class Character(pygame.sprite.Sprite):
         self.attack_timer = max(0.0, self.attack_timer - dt)
 
         keys = pygame.key.get_pressed()
-        mouse_left = pygame.mouse.get_pressed()[0]
+        mouse_left = (self.attack_mouse_enabled
+                      and pygame.mouse.get_pressed()[0])
         if (keys[pygame.K_SPACE] or mouse_left) and self.attack_timer <= 0:
             aim = pygame.math.Vector2(*FACING_VECTORS[self.facing])
             spawn = pygame.math.Vector2(self.hitbox.center)
