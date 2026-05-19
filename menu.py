@@ -4,6 +4,7 @@ import level_catalog
 import save
 import audio
 import theme
+from version import VERSION
 # Palette, font cache and the shared title / back-hint / hover
 # primitives. Bound to module-private aliases to match the internal
 # naming used by the screens below.
@@ -112,6 +113,11 @@ class MainMenu:
             MUTED)
         screen.blit(tip, tip.get_rect(
             center=(self.width // 2, self.height - 58)))
+
+        if VERSION:
+            ver = theme.text_surface(self.small_font, VERSION, MUTED)
+            screen.blit(ver, ver.get_rect(
+                bottomleft=(16, self.height - 12)))
 
     def handle_input(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
