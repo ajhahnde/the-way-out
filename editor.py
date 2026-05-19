@@ -414,8 +414,11 @@ class LevelEditor:
     def _screen_to_cell(self, sx, sy):
         if not self.canvas_rect.collidepoint(sx, sy):
             return None
-        wx = sx - self.canvas_rect.left + self.cam_x
-        wy = sy - self.canvas_rect.top + self.cam_y
+        # int() to match _cell_to_screen and the canvas draw loop
+        # (both use int(self.cam_*)); a float cam here would shift the
+        # hit-test off the drawn grid by the sub-pixel camera fraction.
+        wx = sx - self.canvas_rect.left + int(self.cam_x)
+        wy = sy - self.canvas_rect.top + int(self.cam_y)
         c = int(wx // TILE_SIZE)
         r = int(wy // TILE_SIZE)
         if 0 <= r < self.rows and 0 <= c < self.cols:

@@ -124,9 +124,18 @@ def _start_level(level_id, return_to="lvls"):
     global game_state, return_state
     if not level_manager.load_level(level_id, current_character):
         # Bad/empty/missing level file — don't strand the state machine
-        # in "game" with player=None (update() would crash). Bounce
-        # back to the level select instead.
-        _to_level_menu()
+        # in "game" with player=None (update() would crash). Route the
+        # failure to wherever this launch came from, mirroring
+        # _leave_game(): an editor Test that can't load must land back
+        # in the editor canvas, not the level menu, or the user is
+        # bounced past the editor — the same B17/B19/B20 "editor Test
+        # returns to editor" contract. return_state isn't set until the
+        # success path below, so key off the return_to parameter here.
+        if return_to == "editor":
+            editor.reset_pointer_state()
+            game_state = "editor"
+        else:
+            _to_level_menu()
         return
     game_state = "game"
     return_state = return_to

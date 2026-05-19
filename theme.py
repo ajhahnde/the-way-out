@@ -66,6 +66,34 @@ def font(px):
     return f
 
 
+_text_cache = {}
+
+
+def text_surface(font_, s, color):
+    """Cached ``font_.render(s, True, color)`` for static UI labels.
+
+    Every menu/title primitive re-renders the same constant strings
+    each frame (only the hover *colour* toggles); the surface a fresh
+    render produces is fully determined by ``(font, string, colour)``
+    at the fixed ``True`` antialias, so memoise it. Keyed by
+    ``id(font_)`` — safe because every Font is held in ``_font_cache``
+    for the whole process and never GC'd, so an id can't be recycled.
+    The key set is statically bounded the same way ``_font_cache`` is
+    (a fixed label set × the fixed palette × the size ladder), so a
+    plain dict needs no eviction. Blitting never mutates the source
+    surface, so one shared copy is safe to blit every frame.
+
+    Not named ``text`` so it cannot shadow the ``text`` parameter of
+    ``draw_title`` / ``draw_toast`` when they call it.
+    """
+    key = (id(font_), s, color)
+    surf = _text_cache.get(key)
+    if surf is None:
+        surf = font_.render(s, True, color)
+        _text_cache[key] = surf
+    return surf
+
+
 # --- helpers ---------------------------------------------------------
 def measure(font_, text):
     """Size a string for a layout-only placement that is never blitted."""
@@ -74,7 +102,7 @@ def measure(font_, text):
 
 def draw_title(screen, font_, text, width, y=96):
     """Screen title in caps with a thin centred underline."""
-    surf = font_.render(text.upper(), True, TITLE_C)
+    surf = text_surface(font_, text.upper(), TITLE_C)
     rect = surf.get_rect(center=(width // 2, y))
     screen.blit(surf, rect)
     ly = rect.bottom + 16
@@ -83,7 +111,7 @@ def draw_title(screen, font_, text, width, y=96):
 
 
 def draw_back_hint(screen, font_):
-    surf = font_.render("ESC  BACK", True, MUTED)
+    surf = text_surface(font_, "ESC  BACK", MUTED)
     screen.blit(surf, surf.get_rect(topleft=(48, 44)))
 
 
@@ -135,7 +163,7 @@ def draw_toast(screen, text, font_, *, center_x, center_y,
         bg = shade(BG, +30)
     if border is None:
         border = LINE_C
-    surf = font_.render(text, True, fg)
+    surf = text_surface(font_, text, fg)
     box = surf.get_rect()
     box.width += pad_x * 2
     box.height += pad_y * 2
@@ -281,8 +309,14 @@ class MenuScene:
         return slab
 
     def _build_vignette(self):
-        v = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-        v.fill((*BG, self.VIGNETTE_ALPHA))
+        # Per-surface uniform alpha (SDL's fast blit path), pixel-
+        # identical to a uniform (*BG, A) SRCALPHA blit: both resolve
+        # to dst = BG·(A/255) + dst·(1 − A/255). A plain Surface +
+        # set_alpha blits far cheaper than a full-screen per-pixel
+        # SRCALPHA surface (the single heaviest menu op).
+        v = pygame.Surface((self.width, self.height))
+        v.fill(BG)
+        v.set_alpha(self.VIGNETTE_ALPHA)
         return v
 
     def _build_actors(self, count, scale):

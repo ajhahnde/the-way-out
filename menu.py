@@ -74,11 +74,14 @@ class MainMenu:
         self.status_until = None
 
     def draw(self, screen):
-        screen.fill(BG)
+        # No screen.fill(BG): MenuScene.draw immediately overdraws the
+        # whole screen with 4 opaque slab blits, so the fill is dead
+        # work (submenus keep theirs — PixelDust is sparse, does not
+        # cover the screen).
         self.scene.draw(screen)
         mouse_pos = pygame.mouse.get_pos()
 
-        title = self.title_font.render("THE WAY OUT", True, TITLE_C)
+        title = theme.text_surface(self.title_font, "THE WAY OUT", TITLE_C)
         screen.blit(title, title.get_rect(
             center=(self.width // 2, self.title_center_y)))
 
@@ -96,16 +99,17 @@ class MainMenu:
                                  (self.width // 2 - 90, ly),
                                  (self.width // 2 + 90, ly), 2)
             color = ACCENT if is_hovered else INK
-            text_surf = self.font.render(btn["text"], True, color)
+            text_surf = theme.text_surface(self.font, btn["text"], color)
             screen.blit(text_surf, btn["rect"])
             if is_hovered:
                 _hover_marker(screen, btn["rect"])
 
         d = theme.HINT_DOT
-        tip = self.small_font.render(
+        tip = theme.text_surface(
+            self.small_font,
             f"WASD/Arrows move & aim   {d}   Space shoot   {d}   "
             f"Shift dash   {d}   E use",
-            True, MUTED)
+            MUTED)
         screen.blit(tip, tip.get_rect(
             center=(self.width // 2, self.height - 58)))
 
@@ -177,8 +181,8 @@ class SettingsMenu:
         for btn in self.buttons:
             is_hovered = btn["rect"].collidepoint(mouse_pos)
             color = ACCENT if is_hovered else INK
-            screen.blit(self.font.render(
-                btn["text"], True, color), btn["rect"])
+            screen.blit(theme.text_surface(
+                self.font, btn["text"], color), btn["rect"])
             if is_hovered:
                 _hover_marker(screen, btn["rect"])
 
@@ -280,9 +284,10 @@ class LevelMenu:
         _draw_back_hint(screen, self.small_font)
 
         if not self.entries:
-            empty = self.small_font.render(
+            empty = theme.text_surface(
+                self.small_font,
                 "No levels found — check assets/levels/manifest.json",
-                True, MUTED)
+                MUTED)
             screen.blit(empty, empty.get_rect(
                 center=(self.width // 2, self.height // 2)))
             return
@@ -298,7 +303,7 @@ class LevelMenu:
                 color = DONE_C
             else:
                 color = INK
-            text_surf = self.font.render(btn["text"], True, color)
+            text_surf = theme.text_surface(self.font, btn["text"], color)
             screen.blit(text_surf, btn["rect"])
             if is_hovered:
                 _hover_marker(screen, btn["rect"])
@@ -307,8 +312,8 @@ class LevelMenu:
             if btn["custom"]:
                 # No pill — a quiet prefix keeps the row flat.
                 tag = f"custom · {tag}"
-            tag_surf = self.tag_font.render(
-                tag, True,
+            tag_surf = theme.text_surface(
+                self.tag_font, tag,
                 MUTED if not is_done else theme.shade(DONE_C, -30))
             screen.blit(tag_surf, tag_surf.get_rect(
                 center=(btn["rect"].centerx, btn["rect"].bottom + 16)))
@@ -319,8 +324,8 @@ class LevelMenu:
                 # INK, not ACCENT: a persistent 20px label in the gold
                 # accent is too low-contrast to read (same reason the
                 # update status line uses INK).
-                bt = self.best_font.render(
-                    f"best  {m}:{s:02d}", True, INK)
+                bt = theme.text_surface(
+                    self.best_font, f"best  {m}:{s:02d}", INK)
                 screen.blit(bt, bt.get_rect(
                     center=(btn["rect"].centerx, btn["rect"].bottom + 42)))
 
@@ -448,12 +453,12 @@ class CharacterMenu:
             else:
                 color = INK
 
-            text_surf = self.name_font.render(btn["text"], True, color)
+            text_surf = theme.text_surface(self.name_font, btn["text"], color)
             screen.blit(text_surf, btn["rect"])
             if is_hovered:
                 _hover_marker(screen, btn["rect"])
-            tag = self.tagline_font.render(
-                btn["tagline"], True, MUTED)
+            tag = theme.text_surface(
+                self.tagline_font, btn["tagline"], MUTED)
             screen.blit(tag, tag.get_rect(
                 topleft=(btn["rect"].left, btn["rect"].bottom + 4)))
 
@@ -491,9 +496,9 @@ class CharacterMenu:
         left = cx - card_w // 2
         top = self.height // 2 - 220
 
-        name = self.card_font.render(btn["text"], True, TITLE_C)
+        name = theme.text_surface(self.card_font, btn["text"], TITLE_C)
         screen.blit(name, name.get_rect(center=(cx, top)))
-        tag = self.tagline_font.render(btn["tagline"], True, MUTED)
+        tag = theme.text_surface(self.tagline_font, btn["tagline"], MUTED)
         screen.blit(tag, tag.get_rect(center=(cx, top + 44)))
         pygame.draw.line(screen, LINE_C,
                          (left + 20, top + 78),
@@ -505,20 +510,30 @@ class CharacterMenu:
             ("DAMAGE",    cls.attack_damage, 25),
             ("FIRE RATE", 1.0 / max(0.01, cls.attack_cooldown), 6.0),
         ]
-        bar_x = left + 130
-        bar_w = card_w - 170
+        # Label column width from font metrics (codebase idiom — cf.
+        # theme.draw_toast, MainMenu._toast_y) so the widest label
+        # ("FIRE RATE") can't overrun a hardcoded 110 px column into
+        # its bar. bar_right reproduces the old right edge
+        # (left+130)+(card_w-170) so the value-number column is byte-
+        # stable; the max(60, …) is a defensive floor (B10-class) that
+        # never triggers with the current font/labels.
+        label_w = max(self.stat_font.size(s)[0] for s, _, _ in stats)
+        bar_right = left + card_w - 40
+        bar_x = left + 20 + label_w + 18
+        bar_w = max(60, bar_right - bar_x)
         bar_h = 10
         y = top + 130
         for label, val, vmax in stats:
-            text = self.stat_font.render(label, True, MUTED)
+            text = theme.text_surface(self.stat_font, label, MUTED)
             screen.blit(text, text.get_rect(midleft=(left + 20, y + 5)))
             ratio = max(0.05, min(1.0, val / vmax))
             theme.draw_bar(screen,
                            pygame.Rect(bar_x, y, bar_w, bar_h),
                            ratio, ACCENT, border=False)
-            num = self.stat_font.render(
+            num = theme.text_surface(
+                self.stat_font,
                 f"{val:.1f}" if isinstance(val, float) else str(val),
-                True, INK)
+                INK)
             screen.blit(num, num.get_rect(midleft=(bar_x + bar_w + 12, y + 5)))
             y += 56
 
@@ -564,7 +579,7 @@ class PauseMenu:
         overlay.fill((*BG, 210))
         screen.blit(overlay, (0, 0))
 
-        title = self.title_font.render("PAUSED", True, TITLE_C)
+        title = theme.text_surface(self.title_font, "PAUSED", TITLE_C)
         t_rect = title.get_rect(
             center=(self.width // 2, self.height // 2 - 200))
         screen.blit(title, t_rect)
@@ -577,11 +592,12 @@ class PauseMenu:
         for btn in self.buttons:
             hov = btn["rect"].collidepoint(mp)
             col = ACCENT if hov else INK
-            screen.blit(self.font.render(btn["text"], True, col), btn["rect"])
+            screen.blit(theme.text_surface(
+                self.font, btn["text"], col), btn["rect"])
             if hov:
                 _hover_marker(screen, btn["rect"])
 
-        hint = self.hint_font.render("Esc to resume", True, MUTED)
+        hint = theme.text_surface(self.hint_font, "Esc to resume", MUTED)
         screen.blit(hint, hint.get_rect(
             center=(self.width // 2, self.height - 88)))
 
