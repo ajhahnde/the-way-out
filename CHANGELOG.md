@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## v0.2.8
+
+The packaged macOS app now installs itself into `/Applications`. No
+save-file format changes; existing saves load as-is.
+
+### App
+
+- On launch, `The Way Out.app` copies itself into `/Applications`
+  (replacing any older copy) and relaunches from there, then runs
+  normally. This fixes macOS App Translocation: a quarantined copy
+  opened from Downloads no longer runs from a random read-only path.
+  If `/Applications` needs authentication the standard macOS password
+  prompt is shown; if the copy can't be done for any reason the game
+  still starts in place. Running an already-installed copy is a no-op.
+
 ## v0.2.7
 
 A playable title screen, in the style of an Assassin's Creed loading

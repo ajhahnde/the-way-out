@@ -14,10 +14,15 @@ Imports only stdlib + ``updater`` (the bundled bootstrap copy) +
 """
 import os
 import runpy
+import shutil
+import subprocess
 import sys
 import traceback
 
 import updater   # bundled bootstrap copy — NOT re-implemented here
+
+APP_NAME = "The Way Out.app"
+APPLICATIONS = "/Applications"
 
 
 def _bundle_seed():
@@ -30,6 +35,82 @@ def _bundle_seed():
     base = getattr(sys, "_MEIPASS",
                    os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, "_seed")
+
+
+def _bundle_path():
+    """Absolute path of the running ``.app`` bundle, or ``None`` when
+    this is a plain ``python launcher.py`` dev run (nothing to install).
+
+    Inside a PyInstaller ``--windowed`` bundle ``sys.executable`` is
+    ``…/The Way Out.app/Contents/MacOS/The Way Out``; the bundle is
+    three directories up.
+    """
+    if not getattr(sys, "frozen", False) or sys.platform != "darwin":
+        return None
+    contents_macos = os.path.dirname(os.path.realpath(sys.executable))
+    bundle = os.path.dirname(os.path.dirname(contents_macos))
+    return bundle if bundle.endswith(".app") else None
+
+
+def _relocate_to_applications():
+    """Make ``/Applications`` hold the canonical copy and run from there.
+
+    macOS *App Translocation* runs a quarantined download from a random
+    read-only path, so a user who keeps double-clicking the copy in
+    Downloads never gets a stable, Gatekeeper-clean install. Mirroring
+    standard Mac app behaviour: copy the bundle into ``/Applications``
+    once (replacing any older copy so it always matches the build that
+    was just launched), then relaunch from there and exit this process.
+
+    Strictly best-effort — any failure falls through and the game still
+    starts from wherever it is. The path-equality check below is the
+    real relaunch-loop guard (the installed copy lives in
+    ``/Applications`` by definition); ``TWO_RELOCATED`` is belt-and-
+    braces for the current process.
+    """
+    if os.environ.get("TWO_RELOCATED") == "1":
+        return
+    bundle = _bundle_path()
+    if bundle is None:
+        return
+    target = os.path.join(APPLICATIONS, APP_NAME)
+    # Already canonical → nothing to do. A translocated bundle never
+    # resolves under /Applications, so this still lets it through.
+    if os.path.realpath(bundle) == os.path.realpath(target):
+        return
+    try:
+        try:
+            if os.path.exists(target):
+                shutil.rmtree(target)
+            shutil.copytree(bundle, target, symlinks=True)
+        except (PermissionError, OSError):
+            # Protected / non-admin /Applications: ask the OS for an
+            # authenticated copy (standard password prompt). Paths are
+            # passed as argv and quoted by AppleScript's ``quoted form
+            # of`` so spaces in "The Way Out.app" can't break the shell
+            # and nothing is injectable.
+            subprocess.run([
+                "osascript",
+                "-e", "on run argv",
+                "-e", "set s to item 1 of argv",
+                "-e", "set t to item 2 of argv",
+                "-e", ('do shell script "rm -rf " & quoted form of t & '
+                       '" && ditto " & quoted form of s & " " & '
+                       'quoted form of t with administrator privileges'),
+                "-e", "end run",
+                bundle, target,
+            ], check=True)
+        if not os.path.isdir(target):
+            return
+        # Hand off to the installed copy. ``open`` returns immediately;
+        # exiting here leaves only the /Applications instance running.
+        subprocess.Popen(["/usr/bin/open", "-n", target],
+                          env=dict(os.environ, TWO_RELOCATED="1"))
+        raise SystemExit(0)
+    except SystemExit:
+        raise
+    except Exception:
+        pass                                  # never block game start
 
 
 def _log_crash(exc):
@@ -122,6 +203,7 @@ def ensure_code():
 
 
 def main():
+    _relocate_to_applications()        # may exec the /Applications copy
     if not ensure_code():
         _error_screen([
             "The Way Out",
