@@ -69,7 +69,9 @@ class Character(pygame.sprite.Sprite):
         self.frame_index = 0
         self.animation_speed = 10
 
-        self.image = self.animations[self.status][self.frame_index]
+        frames = self.animations[self.status]
+        self.image = (frames[self.frame_index] if frames
+                      else self._placeholder_frame())
         self.rect = self.image.get_rect(topleft=(x, y))
 
         # Smaller collision box, centered on the sprite. Walls are
@@ -314,6 +316,20 @@ class Character(pygame.sprite.Sprite):
             audio.play("dash")
 
     # --- animation / tick -------------------------------------------
+
+    def _placeholder_frame(self):
+        """Visible stand-in when a sprite sheet is missing/renamed.
+
+        ``load_assets`` returns ``[]`` for an absent PNG ('crash
+        safety'); this keeps that promise so one bad asset degrades to a
+        loud magenta box instead of an ``IndexError`` that kills the
+        whole run. Magenta matches the editor's missing-art marker.
+        """
+        s = max(self.hitbox_size, 16)
+        surf = pygame.Surface((s, s), pygame.SRCALPHA)
+        surf.fill((180, 60, 180, 120))
+        pygame.draw.rect(surf, (180, 60, 180), surf.get_rect(), 2)
+        return surf
 
     def _apply_overlay(self, frame, color_rgba):
         """Additive RGB overlay that respects the sprite's alpha mask.

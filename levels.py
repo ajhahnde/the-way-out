@@ -571,6 +571,7 @@ class LevelManager:
         self._handle_key()
 
         if (self.boss is not None and self.boss.hp > 0
+                and self.intro_timer <= 0
                 and self.player.invuln_timer <= 0
                 and self.boss.hitbox.colliderect(self.player.hitbox)):
             self.player.take_damage(BOSS_TOUCH_DAMAGE)
@@ -583,7 +584,8 @@ class LevelManager:
             if en.hp <= 0:
                 en.kill()
                 continue
-            if (self.player.invuln_timer <= 0
+            if (self.intro_timer <= 0
+                    and self.player.invuln_timer <= 0
                     and en.hitbox.colliderect(self.player.hitbox)):
                 self.player.take_damage(en.touch_damage)
                 self.player.invuln_timer = PLAYER_INVULN_TIME

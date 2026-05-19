@@ -194,6 +194,14 @@ while running:
             elif game_state == "game":
                 if level_manager.completed or level_manager.failed:
                     _leave_game()
+                    # Esc is consumed here. Without this, when the level
+                    # was launched from the editor's Test button
+                    # (return_state == "editor") _leave_game() switches
+                    # to "editor" and the *same* Esc then falls through
+                    # to editor.handle_input below, which reads it as
+                    # "back" and bounces the user past the editor to the
+                    # main menu instead of the editor canvas.
+                    continue
                 else:
                     game_state = "paused"
 

@@ -104,6 +104,11 @@ def play_music(name):
     path = _find(_MUSIC_DIR, name, _MUSIC_EXTS)
     if path is None:
         stop_music()
+        # Remember the request even though the file is absent: main.py
+        # calls play_music every frame, and without this _current_music
+        # stays None so the unchanged-name guard above never engages —
+        # a missing track would re-stat the FS and re-fade every frame.
+        _current_music = name
         return
     try:
         # Fade the outgoing track, then bring the new one up. Single
