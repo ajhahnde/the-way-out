@@ -373,6 +373,11 @@ while running:
             if bundle is not None:
                 subprocess.Popen(["/usr/bin/open", "-n", bundle])
                 raise SystemExit(0)
+            if getattr(sys, "frozen", False) and sys.platform == "darwin":
+                # Bundle path unresolvable on a frozen darwin build —
+                # os.execv here would reproduce B28 (two windows). Exit
+                # cleanly; the user re-launches manually.
+                raise SystemExit(0)
             if getattr(sys, "frozen", False):
                 os.execv(sys.executable, [sys.executable])
             else:

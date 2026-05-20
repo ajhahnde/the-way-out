@@ -291,6 +291,7 @@ class LevelEditor:
             and my < self.height - self.TOOLBAR_H
             and not any(self._mouse_buttons)
             and self._box_start is None
+            and not self.editing_name
         )
         target = 1.0 if hot else 0.0
         if self._palette_anim != target:
