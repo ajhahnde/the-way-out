@@ -7,17 +7,35 @@ import pygame
 from settings import (
     TILE_SIZE, BOSS_TOUCH_DAMAGE, PLAYER_INVULN_TIME,
     SPIKE_DAMAGE, LEVER_REACH, SLOW_SCALE,
+    HIT_PAUSE_PLAYER_HIT, HIT_PAUSE_BOSS_HIT,
+    HIT_PAUSE_BOSS_DEATH, HIT_PAUSE_PLAYER_DEATH,
+    PARTICLES_PLAYER_HIT, PARTICLES_ENEMY_HIT, PARTICLES_ENEMY_DEATH,
+    PARTICLES_BOSS_HIT, PARTICLES_BOSS_DEATH, PARTICLES_ABILITY,
+    ABILITY_COLOR_WIZARD, ABILITY_COLOR_PENGUIN, ABILITY_COLOR_ELF,
+    ABILITY_COLOR_SHIGGY, ABILITY_COLOR_WOLF,
+    FADE_IN_TIME, FADE_OUT_TIME,
 )
 from units import (
-    Wizard, Penguin, Boss, BOSS_ROSTER, CHARACTER_INFO, ENEMY_INFO)
+    Wizard, Penguin, Elf, Shiggy, Wolf,
+    Boss, BOSS_ROSTER, CHARACTER_INFO, ENEMY_INFO)
 from static_objects import Tile, TileTextures, Prop
 from interactables import Spikes, Lever, Gate, KeyItem, PressurePlate
 from tiles import PROP_CHARS
+from effects import ParticleField, FadeState
 import tileset
 import level_catalog
 import save
 import audio
 import theme
+
+# Per-character ability burst colour, keyed by player class.
+_ABILITY_COLORS = {
+    Wizard: ABILITY_COLOR_WIZARD,
+    Penguin: ABILITY_COLOR_PENGUIN,
+    Elf: ABILITY_COLOR_ELF,
+    Shiggy: ABILITY_COLOR_SHIGGY,
+    Wolf: ABILITY_COLOR_WOLF,
+}
 
 # Boss state -> badge colour. One named set instead of inline tuples
 # scattered through draw_boss_health (FAIL = imminent hit, ACCENT =
@@ -229,6 +247,12 @@ class LevelManager:
         # Damage-edge tracking for screen shake.
         self._last_player_hp = 0
         self._last_boss_hp = None
+        self._last_ability_active = False
+
+        # Game-feel: particle bursts, transition fades, hit-pause clock.
+        self.particles = ParticleField()
+        self.fade = FadeState()
+        self._hit_pause = 0.0
 
         self.title_font = theme.font(90)
         self.big_font = theme.font(110)
@@ -336,6 +360,10 @@ class LevelManager:
         self.arena_rect = None
         self._e_was_down = False
         self._last_boss_hp = None
+        self._last_ability_active = False
+        self.particles.clear()
+        self._hit_pause = 0.0
+        self.fade.start_in(FADE_IN_TIME)
         # Pick the general for this level deterministically from the
         # level id. zlib.crc32 (not Python's built-in hash) so the
         # choice is stable across game restarts, not just retries —
@@ -541,8 +569,18 @@ class LevelManager:
             self.intro_timer = max(0.0, self.intro_timer - dt)
 
         self.camera.update_shake(dt)
+        self.particles.update(dt)
+        self.fade.update(dt)
+        if self._hit_pause > 0:
+            self._hit_pause = max(0.0, self._hit_pause - dt)
 
         if self.completed or self.failed:
+            return
+
+        # Hit-pause freezes only the gameplay actors — the camera, the
+        # particles, the fade and the timers all kept ticking above so
+        # the impact still reads as a snap, not a hang.
+        if self._hit_pause > 0:
             return
 
         # Wizard's Slow ability scales the per-frame dt of every enemy,
@@ -561,6 +599,13 @@ class LevelManager:
         # dungeon — so interactables keep raw dt.
         self.interactable_sprites.update(dt)
         self.camera.follow(self.player, dt)
+
+        # Ability rising edge — one particle burst at activation.
+        if (self.player is not None and self.player.ability_active
+                and not self._last_ability_active):
+            self._emit_ability_burst()
+        if self.player is not None:
+            self._last_ability_active = self.player.ability_active
 
         # Boss only materialises once you actually enter the final hall.
         if (self.has_boss and self.boss is None and not self.boss_defeated
@@ -595,8 +640,15 @@ class LevelManager:
         # below) — the two are intentionally not merged.
         for en in [e for e in self.enemy_sprites if e is not self.boss]:
             if en.hp <= 0:
+                self._emit_enemy_death(en)
                 en.kill()
                 continue
+            # Edge-detect each enemy's HP so a projectile hit puffs even
+            # if it doesn't kill.
+            prev = getattr(en, '_last_hp_for_fx', en.max_hp)
+            if en.hp < prev:
+                self._emit_enemy_hit(en)
+            en._last_hp_for_fx = en.hp
             if (self.intro_timer <= 0
                     and self.player.invuln_timer <= 0
                     and en.hitbox.colliderect(self.player.hitbox)):
@@ -607,7 +659,9 @@ class LevelManager:
         # projectiles and contact damage all shake the camera uniformly.
         if (self.player is not None
                 and self.player.hp < self._last_player_hp):
-            self.camera.shake(5, 0.18)
+            self.camera.shake(4, 0.18)
+            self._hit_pause = max(self._hit_pause, HIT_PAUSE_PLAYER_HIT)
+            self._emit_player_hit()
         if self.player is not None:
             self._last_player_hp = self.player.hp
 
@@ -615,10 +669,14 @@ class LevelManager:
             if (self._last_boss_hp is not None
                     and self.boss.hp < self._last_boss_hp):
                 self.camera.shake(2, 0.08)
+                self._hit_pause = max(self._hit_pause, HIT_PAUSE_BOSS_HIT)
+                self._emit_boss_hit()
             self._last_boss_hp = self.boss.hp
 
         if self.boss is not None and self.boss.hp <= 0:
             self.camera.shake(12, 0.7)
+            self._hit_pause = max(self._hit_pause, HIT_PAUSE_BOSS_DEATH)
+            self._emit_boss_death()
             audio.play("boss_death")
             self.boss.kill()
             self.boss = None
@@ -626,6 +684,8 @@ class LevelManager:
 
         if self.player is not None and self.player.hp <= 0:
             self.camera.shake(8, 0.4)
+            self._hit_pause = max(self._hit_pause, HIT_PAUSE_PLAYER_DEATH)
+            self.fade.start_out(FADE_OUT_TIME)
             audio.stop_music()
             audio.play("player_death")
             self.failed = True
@@ -642,7 +702,51 @@ class LevelManager:
                 save.record_time(self.level_id, self.time)
                 audio.stop_music()
                 audio.play("level_complete")
+                self.fade.start_out(FADE_OUT_TIME)
                 self._saved = True
+
+    # --- effect emitters --------------------------------------------
+
+    def _emit_player_hit(self):
+        cx, cy = self.player.hitbox.center
+        self.particles.burst(
+            cx, cy, PARTICLES_PLAYER_HIT, (255, 80, 80),
+            speed=320, life=0.40, size=4, drag=3.0)
+
+    def _emit_enemy_hit(self, enemy):
+        cx, cy = enemy.hitbox.center
+        self.particles.burst(
+            cx, cy, PARTICLES_ENEMY_HIT, (255, 255, 255),
+            speed=260, life=0.30, size=3, drag=3.5)
+
+    def _emit_enemy_death(self, enemy):
+        cx, cy = enemy.hitbox.center
+        self.particles.burst(
+            cx, cy, PARTICLES_ENEMY_DEATH, (240, 240, 240),
+            speed=300, life=0.55, size=4, drag=2.5)
+
+    def _emit_boss_hit(self):
+        cx, cy = self.boss.hitbox.center
+        self.particles.burst(
+            cx, cy, PARTICLES_BOSS_HIT, (255, 220, 120),
+            speed=260, life=0.35, size=5, drag=3.0)
+
+    def _emit_boss_death(self):
+        cx, cy = self.boss.hitbox.center
+        self.particles.burst(
+            cx, cy, PARTICLES_BOSS_DEATH, (255, 210, 90),
+            speed=520, life=0.95, size=6, size_jitter=3, drag=1.8)
+        # White core puff in the same place.
+        self.particles.burst(
+            cx, cy, PARTICLES_BOSS_DEATH // 2, (255, 255, 255),
+            speed=320, life=0.7, size=4, drag=2.5)
+
+    def _emit_ability_burst(self):
+        color = _ABILITY_COLORS.get(type(self.player), (255, 255, 255))
+        cx, cy = self.player.hitbox.center
+        self.particles.burst(
+            cx, cy, PARTICLES_ABILITY, color,
+            speed=360, life=0.55, size=4, drag=2.2)
 
     def _handle_levers(self):
         """Edge-detected 'E' near a lever pulls it and opens its gate."""
@@ -794,6 +898,14 @@ class LevelManager:
         for proj in self.projectile_sprites:
             screen.blit(proj.image, self.camera.world_to_screen(proj.rect))
 
+        # Particles sit on the playfield (under HUD, under vignette so
+        # the edges don't look painted on top of darkness).
+        self.particles.draw(
+            screen,
+            (self.camera.offset.x + self.camera.shake_offset.x,
+             self.camera.offset.y + self.camera.shake_offset.y),
+            self.width, self.height)
+
         screen.blit(self._vignette, (0, 0))
 
         if self.player is not None and not self.completed:
@@ -812,6 +924,10 @@ class LevelManager:
         elif self.failed:
             self.draw_end_overlay(
                 screen, "You were defeated...", theme.FAIL)
+
+        # Transition fade covers everything (HUD + end overlay too) so
+        # the screen reads as a single sealed frame at the moment of cut.
+        self.fade.draw(screen, self.width, self.height)
 
     def _draw_exit(self, screen):
         if self.exit_rect is None:

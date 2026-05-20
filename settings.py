@@ -76,6 +76,36 @@ BOSS_PROJECTILE_SPEED = 720
 # Hit feedback shared by every unit.
 HIT_FLASH_TIME = 0.12
 
+# --- Game-feel polish ---
+# Hit-pause briefly freezes gameplay actors (player, enemies, boss,
+# projectiles) so each impact reads. The level's own clock (camera
+# shake, particles, fades) keeps ticking, so the freeze is a snap, not
+# a hang.
+HIT_PAUSE_PLAYER_HIT = 0.06
+HIT_PAUSE_BOSS_HIT = 0.04
+HIT_PAUSE_BOSS_DEATH = 0.18
+HIT_PAUSE_PLAYER_DEATH = 0.14
+
+# Particle burst sizes per event. Tuned so a busy room still reads at
+# 60 FPS — the field auto-culls off-screen and dead particles.
+PARTICLES_PLAYER_HIT = 14
+PARTICLES_ENEMY_HIT = 8
+PARTICLES_ENEMY_DEATH = 22
+PARTICLES_BOSS_HIT = 12
+PARTICLES_BOSS_DEATH = 90
+PARTICLES_ABILITY = 28
+
+# Per-character ability burst colours.
+ABILITY_COLOR_WIZARD = (140, 110, 255)   # arcane violet
+ABILITY_COLOR_PENGUIN = (120, 200, 255)  # ice blue
+ABILITY_COLOR_ELF = (180, 240, 130)      # leaf green
+ABILITY_COLOR_SHIGGY = (255, 200, 120)   # warm dust
+ABILITY_COLOR_WOLF = (240, 240, 240)     # speed white
+
+# Transition fade timings (alpha overlay drawn last in LevelManager).
+FADE_IN_TIME = 0.22       # level start
+FADE_OUT_TIME = 0.35      # level complete / death-to-retry
+
 # --- Hazards / Puzzles ---
 # Spike traps run on one shared clock so the rhythm is readable:
 #   safe -> warning (telegraph) -> deadly -> safe ...

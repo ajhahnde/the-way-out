@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## v0.8.0
+
+Combat now reads — every hit registers. Adds game-feel polish across
+the level: brief hit-pause on impactful events, particle bursts on
+hits / deaths / abilities, and a fade between level start and end.
+
+### Gameplay
+
+- Brief hit-pause on impactful events: the screen freezes for a few
+  frames when the player takes damage, when the boss is hit, when the
+  boss dies, and when the player dies. The pause is short enough to
+  read as a snap, not a hang, and the camera + transition keep moving
+  through it.
+
+### UI
+
+- Particle bursts on hits, kills, ability activations, and boss death.
+  Player hits are red, regular hits are white, boss death sprays gold
+  with a white core, and each character's signature ability blooms in
+  its own colour (Wizard violet, Penguin ice blue, Elf leaf green,
+  Shiggy warm dust, Wolf white).
+- Levels fade in on start and fade out on completion / death-to-retry
+  so transitions read as a deliberate cut.
+
 ## v0.7.0
 
 Lets you give each custom map its own **visual theme** in the level
