@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from settings import SAVE_DIR
+import tileset
 
 CUSTOM_DIR = SAVE_DIR / "custom_levels"
 MANIFEST_PATH = Path("assets/levels/manifest.json")
@@ -85,24 +86,48 @@ def _load_manifest():
     return out
 
 
+def read_custom_theme(txt_path):
+    """Theme id from a custom map's ``<name>.json`` sidecar.
+
+    Returns ``tileset.DEFAULT_THEME`` when there is no sidecar, it can't
+    be read, or it isn't the expected shape — defensive in the same
+    spirit as :func:`_load_manifest`, so a stray/corrupt sidecar never
+    breaks the level list."""
+    sidecar = Path(txt_path).with_suffix(".json")
+    try:
+        with open(sidecar, 'r') as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return tileset.DEFAULT_THEME
+    if not isinstance(data, dict):
+        return tileset.DEFAULT_THEME
+    theme_id = data.get("theme", tileset.DEFAULT_THEME)
+    return theme_id if isinstance(theme_id, str) else tileset.DEFAULT_THEME
+
+
 def _scan_custom():
     """Levels saved by the editor under ``~/.the-way-out/custom_levels/``.
 
     The file name (without extension) becomes the human-readable title
     and is also part of the id, so renaming a file = a "new" level for
-    the save system."""
+    the save system. A map's visual theme comes from its ``<name>.json``
+    sidecar (see :func:`read_custom_theme`); an un-themed map resolves to
+    the default tiles and looks unchanged."""
     if not CUSTOM_DIR.exists():
         return []
     out = []
     for path in sorted(CUSTOM_DIR.glob("*.txt")):
         name = path.stem
+        floor_tile, wall_tile = tileset.theme_tiles(read_custom_theme(path))
         out.append(LevelEntry(
             id=f"custom_{name}",
             file=str(path),
             title=name.replace("_", " ").title(),
             tagline="Custom",
             custom=True,
-            music="default"))
+            music="default",
+            floor_tile=floor_tile,
+            wall_tile=wall_tile))
     return out
 
 

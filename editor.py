@@ -34,6 +34,7 @@ The editor is intentionally one self-contained file. It reuses
 to the registry shows up automatically in the palette.
 """
 
+import json
 import re
 from pathlib import Path
 
@@ -177,6 +178,13 @@ class LevelEditor:
         self.picker_entries = []
         self.picker_scroll = 0
 
+        # Theme picker (modal overlay listing the floor/wall presets in
+        # tileset.THEMES). ``theme`` is the current map's theme id; it is
+        # written to the map's <name>.json sidecar on save and restored
+        # from that sidecar on open. new_level / open_level (re)set it.
+        self.theme = tileset.DEFAULT_THEME
+        self.theme_picker_open = False
+
         self.new_level()
         self._layout_palette()
         self._build_toolbar_layout()
@@ -202,6 +210,7 @@ class LevelEditor:
         if self.rows > 2 and self.cols > 2:
             self.grid[1][1] = 'P'
             self.grid[self.rows - 2][self.cols - 2] = 'X'
+        self.theme = tileset.DEFAULT_THEME
         self.cam_x = 0.0
         self.cam_y = 0.0
 
@@ -236,6 +245,9 @@ class LevelEditor:
         self.grid = grid
         # Default name = file stem; user can rename before saving.
         self.name = sanitize(Path(entry.file).stem)
+        # Restore the map's theme from its sidecar (built-ins / un-themed
+        # maps have none and resolve to the default).
+        self.theme = level_catalog.read_custom_theme(entry.file)
         self.cam_x = 0.0
         self.cam_y = 0.0
 
@@ -256,6 +268,7 @@ class LevelEditor:
         self._mouse_buttons = [False, False, False]
         self._last_painted_cell = None
         self.picker_open = False
+        self.theme_picker_open = False
         self._palette_anim = 0.0
         self._layout_palette()
 
@@ -322,7 +335,8 @@ class LevelEditor:
         # feels continuous (event-driven would tick once per repeat).
         pan_speed = TILE_SIZE * 12 * dt  # ~12 tiles/sec
         keys = pygame.key.get_pressed()
-        if not self.editing_name and not self.picker_open:
+        if (not self.editing_name and not self.picker_open
+                and not self.theme_picker_open):
             if keys[pygame.K_a] or keys[pygame.K_LEFT]:
                 self.cam_x -= pan_speed
             if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
@@ -357,6 +371,8 @@ class LevelEditor:
         game state with the currently-saved level, or ``None``."""
         if self.picker_open:
             return self._handle_picker_input(event)
+        if self.theme_picker_open:
+            return self._handle_theme_picker_input(event)
 
         if event.type == pygame.KEYDOWN:
             if self.editing_name:
@@ -488,6 +504,8 @@ class LevelEditor:
                         return self._do_test()
                     elif name == 'load':
                         self._open_picker()
+                    elif name == 'theme':
+                        self._open_theme_picker()
                     elif name == 'clear':
                         self.new_level(self.cols, self.rows, self.name)
                         self._flash("Cleared")
@@ -690,6 +708,15 @@ class LevelEditor:
         except OSError as e:
             self._flash(f"Save failed: {e}")
             return False
+        # Theme sidecar: <name>.json beside the .txt. Non-fatal — the map
+        # itself is already written; a sidecar failure just means the map
+        # reopens with the default theme.
+        sidecar = level_catalog.CUSTOM_DIR / f"{self.name}.json"
+        try:
+            with open(sidecar, 'w') as f:
+                json.dump({"theme": self.theme}, f)
+        except OSError:
+            pass
         if warnings:
             self._flash(f"Saved with warnings: {warnings[0]}")
         else:
@@ -838,6 +865,118 @@ class LevelEditor:
         screen.blit(hint, hint.get_rect(
             midbottom=(panel.centerx, panel.bottom - 16)))
 
+    # --- theme picker (modal) -----------------------------------------
+
+    def _open_theme_picker(self):
+        """Open the modal theme picker over the canvas. Lists the
+        floor/wall presets in ``tileset.THEMES``; the picked theme is
+        saved into the map's sidecar by ``_do_save``."""
+        self.theme_picker_open = True
+
+    def _theme_label(self):
+        """Toolbar-button caption — the current map theme's display
+        name, or a plain ``"Theme"`` if the id is somehow unknown."""
+        for tid, name, _f, _w in tileset.THEMES:
+            if tid == self.theme:
+                return f"Theme: {name}"
+        return "Theme"
+
+    def _theme_picker_panel(self):
+        """Centred rect for the modal theme-picker panel, sized to the
+        fixed number of presets (no scrolling needed)."""
+        rows = len(tileset.THEMES)
+        w = min(480, self.width - 120)
+        h = min(84 + rows * self.PICKER_ROW_H + 52, self.height - 120)
+        rect = pygame.Rect(0, 0, w, h)
+        rect.center = (self.width // 2, self.height // 2)
+        return rect
+
+    def _theme_picker_list_rect(self):
+        """Row area inside the panel (below the title, above the hint)."""
+        panel = self._theme_picker_panel()
+        return pygame.Rect(panel.left, panel.top + 84,
+                           panel.width, panel.height - 84 - 52)
+
+    def _theme_picker_rows(self):
+        """``(rect, preset)`` for every theme row, in ``tileset.THEMES``
+        order. Shared by draw and input so they never disagree."""
+        lr = self._theme_picker_list_rect()
+        rows = []
+        for i, preset in enumerate(tileset.THEMES):
+            y = lr.top + i * self.PICKER_ROW_H
+            rect = pygame.Rect(lr.left + 24, y,
+                               lr.width - 48, self.PICKER_ROW_H)
+            rows.append((rect, preset))
+        return rows
+
+    def _handle_theme_picker_input(self, event):
+        """Drive the modal theme picker. Always returns ``None`` — the
+        picker never leaves the editor or starts a test."""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.theme_picker_open = False
+            return None
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button != 1:
+                return None
+            if not self._theme_picker_panel().collidepoint(event.pos):
+                # Click off the panel dismisses the picker.
+                self.theme_picker_open = False
+                return None
+            for rect, (tid, name, _f, _w) in self._theme_picker_rows():
+                if rect.collidepoint(event.pos):
+                    self.theme = tid
+                    self._flash(f"Theme: {name}")
+                    self.theme_picker_open = False
+                    break
+        return None
+
+    def _draw_theme_picker(self, screen):
+        """Modal overlay: a centred panel listing the floor/wall themes,
+        each with two tile swatches. The current theme row is marked."""
+        dim = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        dim.fill((*theme.BG, 210))
+        screen.blit(dim, (0, 0))
+
+        panel = self._theme_picker_panel()
+        pygame.draw.rect(screen, theme.shade(theme.BG, 6), panel,
+                         border_radius=10)
+        pygame.draw.rect(screen, theme.LINE_C, panel, 2, border_radius=10)
+
+        title = self.font.render("MAP THEME", True, theme.TITLE_C)
+        screen.blit(title, title.get_rect(
+            midtop=(panel.centerx, panel.top + 22)))
+
+        mp = pygame.mouse.get_pos()
+        sw = 38      # tile-swatch size
+        for rect, (tid, name, floor, wall) in self._theme_picker_rows():
+            selected = (tid == self.theme)
+            hov = rect.collidepoint(mp)
+            col = theme.ACCENT if (hov or selected) else theme.INK
+            # Floor + wall swatches so the player sees the actual look.
+            for i, tname in enumerate((floor, wall)):
+                sr = pygame.Rect(rect.left + 16 + i * (sw + 8),
+                                 rect.centery - sw // 2, sw, sw)
+                img = tileset.tile(tname)
+                if img is not None:
+                    screen.blit(pygame.transform.scale(img, (sw, sw)), sr)
+                else:
+                    pygame.draw.rect(screen, theme.shade(theme.BG, 14), sr)
+                pygame.draw.rect(screen, theme.LINE_C, sr, 1)
+            label = self.head_font.render(name, True, col)
+            screen.blit(label, label.get_rect(midleft=(
+                rect.left + 16 + 2 * (sw + 8) + 12, rect.centery)))
+            if selected:
+                mark = self.label_font.render("●", True, theme.ACCENT)
+                screen.blit(mark, mark.get_rect(
+                    midright=(rect.right - 16, rect.centery)))
+
+        hint = self.hint_font.render(
+            "Click a theme   ·   Esc cancel", True, theme.MUTED)
+        screen.blit(hint, hint.get_rect(
+            midbottom=(panel.centerx, panel.bottom - 16)))
+
     # --- draw ---------------------------------------------------------
 
     def draw(self, screen):
@@ -856,6 +995,8 @@ class LevelEditor:
         self._draw_message(screen)
         if self.picker_open:
             self._draw_picker(screen)
+        if self.theme_picker_open:
+            self._draw_theme_picker(screen)
 
     # ----- canvas -----------------------------------------------------
 
@@ -1192,6 +1333,7 @@ class LevelEditor:
             ('clear',  "Clear", 130, 'danger'),
             ('test',   "Test (F5)", 180, 'tool'),
             ('load',   "Load", 130, 'tool'),
+            ('theme',  "Theme", 210, 'tool'),
             ('save',   "Save (Ctrl+S)", 220, 'tool'),
         ]
         right = self.toolbar_rect.right - 20
@@ -1249,6 +1391,9 @@ class LevelEditor:
         mp = pygame.mouse.get_pos()
         for name, rect in self._toolbar_rects.items():
             text, kind = self._toolbar_button_meta[name]
+            # The theme button shows the current map theme's name.
+            if name == 'theme':
+                text = self._theme_label()
             active = (name == 'pick' and self.tool == 'pick')
             hov = rect.collidepoint(mp)
             if active:

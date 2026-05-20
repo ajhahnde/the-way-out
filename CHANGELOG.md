@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## v0.7.0
+
+Lets you give each custom map its own **visual theme** in the level
+editor — until now every player-built map used the same floor and wall
+tiles.
+
+### Editor
+
+- New **Theme** button in the editor toolbar. It opens a picker with
+  five floor/wall presets — **Keep**, **Foundry**, **Cellar**,
+  **Archive**, **Frost** — each shown with tile swatches so you see the
+  look before choosing. The button itself shows the current theme.
+- The chosen theme is saved alongside the map and the level renders
+  with it, in the editor's Test run and in the level menu. Press Esc or
+  click outside to dismiss the picker.
+- Maps saved before this release keep the original look.
+
 ## v0.6.0
 
 Lets the level editor **reopen a custom map you saved**, closing the

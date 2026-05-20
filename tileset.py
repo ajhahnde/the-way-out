@@ -31,6 +31,35 @@ _BASE = os.path.join("assets", "tileset")
 FLOOR_TILE = "Tile_42"
 WALL_TILE = "Tile_03"
 
+# --- map themes ---------------------------------------------------------
+# Named floor/wall presets the editor's theme picker offers per custom
+# map. Each is (id, display name, floor Tile_XX, wall Tile_XX). The id is
+# what gets written to the map's sidecar JSON; ``"keep"`` reuses the
+# global FLOOR_TILE/WALL_TILE above so an un-themed map looks unchanged.
+# A bad tile name is harmless — ``tile`` returns None and the level
+# falls back to the procedural stone look.
+DEFAULT_THEME = "keep"
+THEMES = [
+    ("keep",    "Keep",    FLOOR_TILE, WALL_TILE),
+    ("foundry", "Foundry", "Tile_53", "Tile_34"),
+    ("cellar",  "Cellar",  "Tile_30", "Tile_15"),
+    ("archive", "Archive", "Tile_44", "Tile_05"),
+    ("frost",   "Frost",   "Tile_48", "Tile_07"),
+]
+
+
+def theme_tiles(theme_id):
+    """``(floor_tile, wall_tile)`` for a theme id, falling back to
+    ``DEFAULT_THEME`` for an unknown or missing id."""
+    for tid, _name, floor, wall in THEMES:
+        if tid == theme_id:
+            return floor, wall
+    for tid, _name, floor, wall in THEMES:
+        if tid == DEFAULT_THEME:
+            return floor, wall
+    return FLOOR_TILE, WALL_TILE
+
+
 # --- placeable objects --------------------------------------------------
 # map letter -> (folder under assets/tileset, filename pattern with
 # "{n}" for the variant, variant count, solid?). ``solid`` props join
