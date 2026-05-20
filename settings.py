@@ -44,6 +44,12 @@ DASH_SPEED_MULT = 3.2
 DASH_COOLDOWN = 1.2
 DASH_INVULN_BONUS = 0.05        # extra i-frames after the dash itself ends
 
+# --- Abilities ---
+# Wizard's Slow ability scales the per-frame dt of every enemy, the
+# boss and enemy projectiles by this factor while it is active; the
+# Wizard himself and his own shots keep the raw dt. See levels.py.
+SLOW_SCALE = 0.35
+
 # Boss (Mr. Green) — slower than the player so it can be kited.
 BOSS_SCALE = 9
 BOSS_SPEED = 250

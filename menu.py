@@ -189,7 +189,7 @@ class MainMenu:
         tip = theme.text_surface(
             self.small_font,
             f"WASD/Arrows move + aim   {d}   Space shoot   {d}   "
-            f"Shift dash   {d}   E use",
+            f"Shift ability   {d}   E use",
             MUTED)
         screen.blit(tip, tip.get_rect(
             center=(self.width // 2, self.height - 58)))
@@ -622,6 +622,21 @@ class CharacterMenu:
                 INK)
             screen.blit(num, num.get_rect(midleft=(bar_x + bar_w + 12, y + 5)))
             y += 56
+
+        # Signature ability — a fifth line below the stat bars so the
+        # differentiator reads before the character is picked.
+        if getattr(cls, "ABILITY_NAME", ""):
+            pygame.draw.line(screen, LINE_C,
+                             (left + 20, y - 6),
+                             (left + card_w - 20, y - 6), 2)
+            y += 14
+            name = theme.text_surface(
+                self.stat_font, f"ABILITY  {cls.ABILITY_NAME}", TITLE_C)
+            screen.blit(name, name.get_rect(midleft=(left + 20, y + 5)))
+            y += 34
+            desc = theme.text_surface(
+                self.tagline_font, cls.ABILITY_DESC, MUTED)
+            screen.blit(desc, desc.get_rect(midleft=(left + 20, y + 5)))
 
     def handle_input(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

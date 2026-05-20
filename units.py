@@ -46,6 +46,16 @@ class Character(pygame.sprite.Sprite):
     attack_damage = PROJECTILE_DAMAGE
     attack_cooldown = ATTACK_COOLDOWN
 
+    # --- Signature ability ---
+    # Each playable subclass overrides these plus the activate / tick /
+    # on_ability_end hooks below; the base values keep non-playable
+    # units (Enemy / Boss) inert — they never reach the trigger path.
+    ABILITY_NAME = ""           # HUD + character-menu label
+    ABILITY_DESC = ""           # one-line tagline for the character menu
+    ABILITY_GLYPH = "dash"      # which icon draw_ability_meter draws
+    ABILITY_DURATION = 0.0      # seconds the ability stays active
+    ABILITY_COOLDOWN = 0.0      # seconds before it can fire again
+
     # When False, left mouse no longer triggers an attack — only Space
     # fires. The main-menu's playable avatar sets this off so clicks on
     # buttons don't double as shots; gameplay keeps the default.
@@ -101,13 +111,15 @@ class Character(pygame.sprite.Sprite):
         # opaque pixels (so transparent padding stays transparent).
         self.tint_color = None
 
-        # Dash state — the player gets a Shift burst with i-frames and
-        # a cooldown; enemies don't dash through this path (Boss has its
-        # own state-machine dash).
-        self.dash_timer = 0.0          # seconds remaining of active dash
-        self.dash_cooldown_timer = 0.0  # seconds until dash can be used
-        self.speed_mult = 1.0           # >1 during dash
-        self._dash_dir = pygame.math.Vector2()
+        # Ability state — the player triggers their character's
+        # signature ability on Shift; the base class owns only these
+        # timers, each playable subclass owns the actual mechanic.
+        # Enemies never reach the trigger path (projectile_group stays
+        # None), so this stays inert for them.
+        self.ability_timer = 0.0           # seconds left of active ability
+        self.ability_cooldown_timer = 0.0  # seconds until it can re-fire
+        self.ability_active = False
+        self.speed_mult = 1.0              # >1 during a dash / sprint
 
         # Set by the level for the player only; enemies leave these None
         # unless the level wires them up (boss phase 2 needs them too).
@@ -250,6 +262,11 @@ class Character(pygame.sprite.Sprite):
 
     # --- combat -----------------------------------------------------
 
+    def current_attack_cooldown(self):
+        """Seconds between shots. A hook so an ability (Elf's
+        rapid-fire) can shorten the cadence for its active window."""
+        return self.attack_cooldown
+
     def handle_attack(self, dt):
         """Player only: fire a projectile in the facing direction on
         Space or left-click.
@@ -274,52 +291,55 @@ class Character(pygame.sprite.Sprite):
                 spawn, aim,
                 self.obstacle_sprites, self.projectile_targets,
                 [self.projectile_group],
-                damage=self.attack_damage)
+                damage=self.attack_damage, owner='player')
             audio.play("shoot")
-            self.attack_timer = self.attack_cooldown
+            self.attack_timer = self.current_attack_cooldown()
 
-    def handle_dash(self, dt):
-        """Shift triggers a short, i-framed speed burst.
+    def handle_ability(self, dt):
+        """Shift triggers this character's signature ability.
 
-        Direction is locked at dash start (current input dir, falling
-        back to facing) so a panic dash always commits somewhere
-        sensible. Only the player goes through this — the Boss has its
-        own dash state.
+        The base class owns only the timers; each playable subclass
+        fills in :meth:`activate_ability` (and, where the ability needs
+        per-frame work or teardown, :meth:`tick_ability` /
+        :meth:`on_ability_end`). Only the player reaches the trigger
+        path — enemies leave ``projectile_group`` None.
         """
-        # Tick timers first. Cooldown only counts once the dash itself
-        # has ended.
-        if self.dash_timer > 0:
-            self.dash_timer = max(0.0, self.dash_timer - dt)
-            if self.dash_timer == 0:
-                self.speed_mult = 1.0
-                self.dash_cooldown_timer = DASH_COOLDOWN
-                # A whisker of i-frames after landing helps you cross
-                # contact-damage windows with frame-perfect dashes.
-                self.invuln_timer = max(self.invuln_timer,
-                                        DASH_INVULN_BONUS)
+        # Tick the active window first; the cooldown only counts once
+        # the ability itself has ended.
+        if self.ability_active:
+            self.ability_timer = max(0.0, self.ability_timer - dt)
+            if self.ability_timer == 0:
+                self.ability_active = False
+                self.ability_cooldown_timer = self.ABILITY_COOLDOWN
+                self.on_ability_end()
             else:
-                # Lock direction during dash so mid-burst input can't
-                # change course.
-                self.direction.update(self._dash_dir)
-        elif self.dash_cooldown_timer > 0:
-            self.dash_cooldown_timer = max(
-                0.0, self.dash_cooldown_timer - dt)
+                self.tick_ability(dt)
+        elif self.ability_cooldown_timer > 0:
+            self.ability_cooldown_timer = max(
+                0.0, self.ability_cooldown_timer - dt)
 
         if self.projectile_group is None:
-            return  # only the player dashes via input
+            return  # only the player triggers abilities via input
 
         keys = pygame.key.get_pressed()
         shift = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
-        if (shift and self.dash_timer == 0
-                and self.dash_cooldown_timer == 0):
-            d = self.direction if self.direction.magnitude() != 0 \
-                else pygame.math.Vector2(*FACING_VECTORS[self.facing])
-            self._dash_dir = d.normalize()
-            self.direction.update(self._dash_dir)
-            self.dash_timer = DASH_DURATION
-            self.speed_mult = DASH_SPEED_MULT
-            self.invuln_timer = max(self.invuln_timer, DASH_DURATION)
-            audio.play("dash")
+        if (shift and not self.ability_active
+                and self.ability_cooldown_timer == 0):
+            self.ability_active = True
+            self.ability_timer = self.ABILITY_DURATION
+            self.activate_ability()
+
+    # Subclass hooks — no-ops on the base so Enemy / Boss stay inert
+    # and a character with no per-frame work only overrides what it
+    # actually needs.
+    def activate_ability(self):
+        """Run once the instant the ability fires."""
+
+    def tick_ability(self, dt):
+        """Run every frame the ability is active (not its final frame)."""
+
+    def on_ability_end(self):
+        """Run once when the active window runs out."""
 
     # --- animation / tick -------------------------------------------
 
@@ -365,8 +385,11 @@ class Character(pygame.sprite.Sprite):
         self.frame_index %= len(current_animation)
         frame = current_animation[int(self.frame_index)]
 
-        # Flicker while invulnerable so hits read clearly.
-        if self.invuln_timer > 0 and int(self.invuln_timer * 20) % 2 == 0:
+        # Flicker while invulnerable so hits read clearly — but not
+        # while an ability is active: Penguin's shield shows an aura
+        # instead, and a 0.18 s dash flicker barely registers anyway.
+        if (self.invuln_timer > 0 and not self.ability_active
+                and int(self.invuln_timer * 20) % 2 == 0):
             frame = frame.copy()
             frame.set_alpha(90)
         # Boss telegraph tint (red windup / gold aim) — applied before
@@ -385,7 +408,7 @@ class Character(pygame.sprite.Sprite):
             self.hit_flash_timer = max(0.0, self.hit_flash_timer - dt)
 
         self.get_input()
-        self.handle_dash(dt)
+        self.handle_ability(dt)
         self.get_status()
         self.move(dt)
         self.animate(dt)
@@ -398,45 +421,150 @@ class Character(pygame.sprite.Sprite):
 # sync if you tune the numbers.
 
 class Wizard(Character):
-    """Balanced reference character."""
+    """Balanced reference character.
+
+    Signature — *Slow*: bends time for every enemy, the boss and their
+    in-flight shots while the Wizard keeps moving and firing at full
+    speed. The slow itself lives in ``LevelManager.update``, which reads
+    ``ability_active``; this class only triggers it.
+    """
     asset_folder = "wizard"
     # defaults: HP 100, spd 600, cd 0.35, dmg 10
 
+    ABILITY_NAME = "SLOW"
+    ABILITY_DESC = "Slows enemies and their shots for 3s"
+    ABILITY_GLYPH = "slow"
+    ABILITY_DURATION = 3.0
+    ABILITY_COOLDOWN = 12.0
+
+    def activate_ability(self):
+        audio.play("slow")
+
 
 class Penguin(Character):
-    """Tank — slower but takes more punishment and hits a bit harder."""
+    """Tank — slower but takes more punishment and hits a bit harder.
+
+    Signature — *Shield*: total damage immunity for a short window.
+    Implemented by keeping ``invuln_timer`` topped up, so every damage
+    path (boss / enemy contact, spikes, projectiles — all gated on
+    ``invuln_timer``) is blocked for free.
+    """
     asset_folder = "penguin"
     max_hp = 140
     speed = 480
     attack_damage = 12
     attack_cooldown = 0.45
 
+    ABILITY_NAME = "SHIELD"
+    ABILITY_DESC = "Immune to all damage for 2.5s"
+    ABILITY_GLYPH = "shield"
+    ABILITY_DURATION = 2.5
+    ABILITY_COOLDOWN = 11.0
+
+    def activate_ability(self):
+        audio.play("shield")
+
+    def tick_ability(self, dt):
+        # A hit drops invuln_timer to PLAYER_INVULN_TIME, which can be
+        # shorter than the shield still has to run — so re-arm a sliver
+        # of i-frames every frame the shield is up.
+        self.invuln_timer = max(self.invuln_timer, 0.2)
+
 
 class Elf(Character):
-    """Archer — rapid-fire, lower damage per shot, fragile."""
+    """Archer — rapid-fire, lower damage per shot, fragile.
+
+    Signature — *Volley*: doubles the fire rate for a short window by
+    halving the effective attack cooldown.
+    """
     asset_folder = "elf"
     max_hp = 90
     speed = 580
     attack_damage = 7
     attack_cooldown = 0.20
 
+    ABILITY_NAME = "VOLLEY"
+    ABILITY_DESC = "Doubles fire rate for 2s"
+    ABILITY_GLYPH = "rapid"
+    ABILITY_DURATION = 2.0
+    ABILITY_COOLDOWN = 9.0
+
+    def activate_ability(self):
+        audio.play("volley")
+
+    def current_attack_cooldown(self):
+        if self.ability_active:
+            return self.attack_cooldown * 0.5
+        return self.attack_cooldown
+
 
 class Shiggy(Character):
-    """Glass cannon — biggest hit, smallest health pool."""
+    """Glass cannon — biggest hit, smallest health pool.
+
+    Signature — *Dash*: a short, i-framed speed burst. Direction is
+    locked at dash start (current input dir, falling back to facing) so
+    a panic dash always commits somewhere sensible. This is the dash
+    every character shared before v0.5.0 — now Shiggy's alone.
+    """
     asset_folder = "shiggy"
     max_hp = 70
     speed = 620
     attack_damage = 20
     attack_cooldown = 0.40
 
+    ABILITY_NAME = "DASH"
+    ABILITY_DESC = "Quick i-framed burst dash"
+    ABILITY_GLYPH = "dash"
+    ABILITY_DURATION = DASH_DURATION
+    ABILITY_COOLDOWN = DASH_COOLDOWN
+
+    def activate_ability(self):
+        d = self.direction if self.direction.magnitude() != 0 \
+            else pygame.math.Vector2(*FACING_VECTORS[self.facing])
+        self._dash_dir = d.normalize()
+        self.direction.update(self._dash_dir)
+        self.speed_mult = DASH_SPEED_MULT
+        self.invuln_timer = max(self.invuln_timer, DASH_DURATION)
+        audio.play("dash")
+
+    def tick_ability(self, dt):
+        # Lock direction during the dash so mid-burst input can't
+        # change course.
+        self.direction.update(self._dash_dir)
+
+    def on_ability_end(self):
+        self.speed_mult = 1.0
+        # A whisker of i-frames after landing helps cross contact-damage
+        # windows with frame-perfect dashes.
+        self.invuln_timer = max(self.invuln_timer, DASH_INVULN_BONUS)
+
 
 class Wolf(Character):
-    """Scout — very fast, modest combat stats."""
+    """Scout — very fast, modest combat stats.
+
+    Signature — *Sprint*: a burst of peak movement speed. Unlike
+    Shiggy's dash it grants no i-frames and never locks the steering —
+    full directional control the whole time.
+    """
     asset_folder = "wolf"
     max_hp = 85
     speed = 760
     attack_damage = 9
     attack_cooldown = 0.40
+
+    ABILITY_NAME = "SPRINT"
+    ABILITY_DESC = "Peak movement speed for 1.5s"
+    ABILITY_GLYPH = "sprint"
+    ABILITY_DURATION = 1.5
+    ABILITY_COOLDOWN = 8.0
+    SPRINT_SPEED_MULT = 2.0
+
+    def activate_ability(self):
+        self.speed_mult = self.SPRINT_SPEED_MULT
+        audio.play("sprint")
+
+    def on_ability_end(self):
+        self.speed_mult = 1.0
 
 
 # Catalogue used by the character menu to display stats and by
@@ -536,8 +664,8 @@ class Boss(Character):
         # the state machine in :meth:`update`.
         return
 
-    def handle_dash(self, dt):
-        # Boss dash is a state, not a button — skip the player path.
+    def handle_ability(self, dt):
+        # Boss has no signature ability — its dash is an FSM state.
         return
 
     def _in_phase2(self):
@@ -589,7 +717,7 @@ class Boss(Character):
                 [self.projectile_group],
                 damage=BOSS_PROJECTILE_DAMAGE,
                 speed=BOSS_PROJECTILE_SPEED,
-                color=(255, 130, 70))
+                color=(255, 130, 70), owner='enemy')
 
     def _update_tint(self):
         """Red ramp during windup, gold ramp during aim — the colour
@@ -687,8 +815,8 @@ class Enemy(Character):
     def handle_attack(self, dt):
         return  # contact-only
 
-    def handle_dash(self, dt):
-        return  # no dash
+    def handle_ability(self, dt):
+        return  # no signature ability
 
 
 class Orange(Enemy):
@@ -709,17 +837,20 @@ class Projectile(pygame.sprite.Sprite):
     """A simple orb that flies straight, hurts its targets and dies on walls.
 
     The colour and speed can be customised so the boss's volley reads
-    visually different from the player's shots.
+    visually different from the player's shots. ``owner`` ('player' /
+    'enemy') tags which side fired it, so the Wizard's slow-time can
+    spare player shots while slowing enemy ones.
     """
 
     def __init__(self, pos, direction, obstacle_sprites, targets, groups,
                  damage=PROJECTILE_DAMAGE, color=(120, 230, 255),
-                 speed=PROJECTILE_SPEED):
+                 speed=PROJECTILE_SPEED, owner='enemy'):
         super().__init__(groups)
         self.obstacle_sprites = obstacle_sprites
         self.targets = targets
         self.damage = damage
         self.speed = speed
+        self.owner = owner
 
         r = PROJECTILE_RADIUS
         size = (r + 4) * 2

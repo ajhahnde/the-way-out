@@ -6,9 +6,10 @@ from collections import deque
 import pygame
 from settings import (
     TILE_SIZE, BOSS_TOUCH_DAMAGE, PLAYER_INVULN_TIME,
-    SPIKE_DAMAGE, LEVER_REACH, DASH_COOLDOWN,
+    SPIKE_DAMAGE, LEVER_REACH, SLOW_SCALE,
 )
-from units import Wizard, Boss, BOSS_ROSTER, CHARACTER_INFO, ENEMY_INFO
+from units import (
+    Wizard, Penguin, Boss, BOSS_ROSTER, CHARACTER_INFO, ENEMY_INFO)
 from static_objects import Tile, TileTextures, Prop
 from interactables import Spikes, Lever, Gate, KeyItem, PressurePlate
 from tiles import PROP_CHARS
@@ -544,8 +545,20 @@ class LevelManager:
         if self.completed or self.failed:
             return
 
-        self.entities.update(dt)
-        self.projectile_sprites.update(dt)
+        # Wizard's Slow ability scales the per-frame dt of every enemy,
+        # the boss and enemy projectiles. self.entities is exactly
+        # {player} ∪ enemy_sprites, so dispatch per actor instead of one
+        # group update — the player and his own shots keep raw dt.
+        slow = (isinstance(self.player, Wizard)
+                and self.player.ability_active)
+        dt_eff = dt * SLOW_SCALE if slow else dt
+        self.player.update(dt)
+        for enemy in self.enemy_sprites:        # generic enemies + boss
+            enemy.update(dt_eff)
+        for proj in self.projectile_sprites:
+            proj.update(dt if proj.owner == 'player' else dt_eff)
+        # Spikes are a world clock — the Wizard slows enemies, not the
+        # dungeon — so interactables keep raw dt.
         self.interactable_sprites.update(dt)
         self.camera.follow(self.player, dt)
 
@@ -772,6 +785,12 @@ class LevelManager:
         for sprite in sorted(self.entities, key=lambda s: s.hitbox.bottom):
             self._draw_world_sprite(screen, sprite)
 
+        # Penguin's shield has no sprite change of its own — ring the
+        # player while it holds.
+        if (isinstance(self.player, Penguin)
+                and self.player.ability_active):
+            self._draw_shield_aura(screen)
+
         for proj in self.projectile_sprites:
             screen.blit(proj.image, self.camera.world_to_screen(proj.rect))
 
@@ -779,7 +798,7 @@ class LevelManager:
 
         if self.player is not None and not self.completed:
             self.draw_player_health(screen)
-            self.draw_dash_meter(screen)
+            self.draw_ability_meter(screen)
             if self.needs_key:
                 self.draw_key_status(screen)
         if self.boss is not None:
@@ -848,25 +867,28 @@ class LevelManager:
             True, theme.INK)
         screen.blit(label, (x, y - 36))
 
-    def draw_dash_meter(self, screen):
-        """Small ring next to the HP showing dash readiness. Filled
-        ring = ready (Shift will fire); shrinking arc = cooldown left."""
+    def draw_ability_meter(self, screen):
+        """Small ring next to the HP showing the character's signature
+        ability. Filled = ready (Shift fires it); bright = active right
+        now; shrinking arc = cooldown left."""
         if self.player is None:
             return
         radius = 22
         cx = 40 + 460 + 36 + radius
         cy = self.height - 40 - 34 // 2 - 6
-        ready = (self.player.dash_cooldown_timer == 0
-                 and self.player.dash_timer == 0)
+        active = self.player.ability_active
+        ready = (not active and self.player.ability_cooldown_timer == 0)
         # Backplate
         pygame.draw.circle(screen, theme.shade(theme.BG, -10),
                            (cx, cy), radius + 4)
         pygame.draw.circle(screen, theme.LINE_C, (cx, cy), radius)
-        if ready:
+        if active:
+            pygame.draw.circle(screen, theme.SUCCESS, (cx, cy), radius - 4)
+        elif ready:
             pygame.draw.circle(screen, theme.ACCENT, (cx, cy), radius - 4)
         else:
-            ratio = 1.0 - (self.player.dash_cooldown_timer
-                           / max(0.001, DASH_COOLDOWN))
+            ratio = 1.0 - (self.player.ability_cooldown_timer
+                           / max(0.001, self.player.ABILITY_COOLDOWN))
             # Draw filled wedge from -pi/2 sweeping clockwise.
             ring = pygame.Surface((radius * 2 + 4, radius * 2 + 4),
                                   pygame.SRCALPHA)
@@ -883,17 +905,56 @@ class LevelManager:
             screen.blit(ring, (cx - radius - 2, cy - radius - 2))
         pygame.draw.circle(screen, theme.shade(theme.BG, -6),
                            (cx, cy), radius, 2)
-        # Glyph: lightning-style chevron
-        col = theme.INK if ready else theme.MUTED
-        pygame.draw.polygon(screen, col, [
-            (cx - 6, cy - 9), (cx + 3, cy - 2),
-            (cx - 1, cy - 1), (cx + 6, cy + 9),
-            (cx - 3, cy + 2), (cx + 1, cy + 1),
-        ])
+        lit = active or ready
+        col = theme.INK if lit else theme.MUTED
+        self._draw_ability_glyph(
+            screen, cx, cy, self.player.ABILITY_GLYPH, col)
         cap = self.label_font.render(
-            "DASH" if ready else "...", True,
-            theme.INK if ready else theme.MUTED)
+            self.player.ABILITY_NAME if lit else "...", True, col)
         screen.blit(cap, (cx + radius + 14, cy - 14))
+
+    def _draw_ability_glyph(self, screen, cx, cy, kind, col):
+        """Tiny vector icon for the ability meter — one per glyph kind
+        used by the playable roster."""
+        if kind == "slow":                       # hourglass
+            pygame.draw.polygon(screen, col, [
+                (cx - 7, cy - 9), (cx + 7, cy - 9), (cx, cy)])
+            pygame.draw.polygon(screen, col, [
+                (cx - 7, cy + 9), (cx + 7, cy + 9), (cx, cy)])
+        elif kind == "shield":
+            pygame.draw.polygon(screen, col, [
+                (cx, cy - 10), (cx + 8, cy - 5), (cx + 8, cy + 2),
+                (cx, cy + 10), (cx - 8, cy + 2), (cx - 8, cy - 5)], 2)
+        elif kind == "rapid":                    # double chevron
+            for dx in (-4, 2):
+                pygame.draw.lines(screen, col, False, [
+                    (cx + dx - 3, cy - 7), (cx + dx + 4, cy),
+                    (cx + dx - 3, cy + 7)], 2)
+        elif kind == "sprint":                   # wedge + speed lines
+            pygame.draw.polygon(screen, col, [
+                (cx + 1, cy - 8), (cx + 9, cy), (cx + 1, cy + 8)])
+            for i, dy in enumerate((-5, 0, 5)):
+                pygame.draw.line(screen, col,
+                                 (cx - 9, cy + dy),
+                                 (cx - 2 - i, cy + dy), 2)
+        else:                                    # "dash" — lightning bolt
+            pygame.draw.polygon(screen, col, [
+                (cx - 6, cy - 9), (cx + 3, cy - 2),
+                (cx - 1, cy - 1), (cx + 6, cy + 9),
+                (cx - 3, cy + 2), (cx + 1, cy + 1),
+            ])
+
+    def _draw_shield_aura(self, screen):
+        """Pulsing ring around the player while Penguin's shield holds."""
+        r = self.camera.world_to_screen(self.player.hitbox)
+        pulse = 0.5 + 0.5 * abs((self.time * 2.4) % 2 - 1)
+        radius = int(self.player.hitbox.width * 0.7 + 8 * pulse)
+        aura = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(aura, (*theme.ACCENT, int(40 + 50 * pulse)),
+                           (radius, radius), radius)
+        pygame.draw.circle(aura, (*theme.ACCENT, int(120 + 80 * pulse)),
+                           (radius, radius), radius, 3)
+        screen.blit(aura, aura.get_rect(center=r.center))
 
     def draw_key_status(self, screen):
         """Small chip by the HP bar: dim when the key is still out
@@ -987,7 +1048,7 @@ class LevelManager:
             d = theme.HINT_DOT
             hint = self.hint_font.render(
                 f"WASD/Arrows to move & aim  {d}  Space to shoot  {d}  "
-                f"Shift to dash  {d}  E to use",
+                f"Shift for ability  {d}  E to use",
                 True, theme.MUTED)
             hint.set_alpha(alpha)
             screen.blit(hint, hint.get_rect(center=(cx, cy + 160)))

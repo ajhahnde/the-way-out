@@ -335,6 +335,14 @@ while running:
                       and not level_manager.failed)
     pygame.mouse.set_visible(not in_active_game)
 
+    # Keyboard grab while a level is live: SDL routes macOS system
+    # shortcuts (Cmd-Tab, Mission Control, Spaces) to the game instead
+    # of the OS, so they can't yank focus mid-fight. Released in menus,
+    # pause and the level-end screen so the player can always tab away;
+    # the game's own Cmd-Q handler still fires (the combo reaches the
+    # app, which quits cleanly).
+    pygame.event.set_keyboard_grab(in_active_game)
+
     # Auto-dismiss the main-menu status toast once its TTL elapses so a
     # stale "Already up to date." doesn't sit on screen forever.
     if (main_menu.status_until is not None

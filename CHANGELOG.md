@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## v0.5.0
+
+Gives every playable character a distinct **signature ability** on a
+cooldown, triggered with **Shift** — the combat differentiator for the
+v1.0.0 cut. The universal dash is now Shiggy's alone.
+
+### Gameplay
+
+- Each character has one signature ability, fired with Shift on its
+  own cooldown:
+  - **Wizard — Slow:** bends time for every enemy, the boss and their
+    in-flight shots for 3s, while the Wizard keeps moving and firing at
+    full speed.
+  - **Shiggy — Dash:** the short, i-framed burst dash every character
+    shared before this release — now Shiggy's signature alone.
+  - **Penguin — Shield:** total damage immunity for 2.5s.
+  - **Elf — Volley:** doubled fire rate for 2s.
+  - **Wolf — Sprint:** a 1.5s burst of peak movement speed (no
+    i-frames, full steering — distinct from Shiggy's dash).
+- The other four characters no longer have the dash; each is defined
+  by its own ability instead.
+
+### UI
+
+- The HUD dash ring is now an ability ring: a per-character glyph,
+  bright while the ability is active, a depleting arc on cooldown.
+- Character select shows each character's ability — name and a
+  one-line description — below the four stat bars.
+- Control hints updated from "Shift dash" to "Shift ability".
+
+### Fixes
+
+- macOS system shortcuts (Cmd-Tab, Mission Control, Spaces) no longer
+  steal focus mid-level. The keyboard is grabbed by the game while a
+  level is live, so those combos reach the game instead of the OS; the
+  grab is released in menus, pause and the level-end screen so the
+  player can always tab away. The in-game Cmd-Q quit still works.
+
 ## v0.4.0
 
 Adds the second new built-in level for the v1.0.0 cut: **Level 5 —
