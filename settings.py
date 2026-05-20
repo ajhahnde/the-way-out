@@ -106,6 +106,11 @@ ABILITY_COLOR_WOLF = (240, 240, 240)     # speed white
 FADE_IN_TIME = 0.22       # level start
 FADE_OUT_TIME = 0.35      # level complete / death-to-retry
 
+# Inter-level loading screen shown between the level menu and play.
+# Press-or-timeout: auto-advance after this many seconds, or any
+# dismiss-input (Enter / Space / left-click / Esc) skips early.
+LOADING_SCREEN_DURATION = 3.0
+
 # --- Hazards / Puzzles ---
 # Spike traps run on one shared clock so the rhythm is readable:
 #   safe -> warning (telegraph) -> deadly -> safe ...

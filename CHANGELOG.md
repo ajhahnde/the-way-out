@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## v0.10.0
+
+Adds an inter-level loading screen between the level menu and play —
+one focused beat showing the level title, tagline, your character, and
+the controls before the room becomes interactive.
+
+### UI
+
+- New loading screen between the level menu and play. Shows the
+  level's title and tagline, an idle frame of your selected character,
+  and a control hint bar. Auto-advances after a few seconds, or press
+  Enter / Space / left-click to skip. Esc cancels back to the level
+  menu (or the editor, if launched from Test).
+- Retries are snappy: pressing R after a death, or Restart from the
+  pause menu, reloads the room directly without the loading screen.
+- The previous in-level title card that overlaid the live world is
+  gone — the loading screen now carries the title surface, and the
+  fade-in covers the visual handoff into the room. Contact damage is
+  still suspended during the fade so the player can't be hit before
+  they can react.
+
 ## v0.9.0
 
 Hits, abilities, doors and pickups now have sound. Adds 18

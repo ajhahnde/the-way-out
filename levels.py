@@ -208,8 +208,9 @@ class LevelManager:
         self.map_surface = None
         # Identity of the loaded level. ``level_id`` is the stable
         # string id from the catalog (used by save.py); ``level_title``
-        # and ``level_tagline`` come from the same entry and drive the
-        # intro card. None until a level is loaded.
+        # and ``level_tagline`` come from the same entry and are now
+        # surfaced by ``loading_screen.LoadingScreen`` before the load.
+        # None until a level is loaded.
         self.level_id = ""
         self.level_title = ""
         self.level_tagline = ""
@@ -223,7 +224,11 @@ class LevelManager:
         self.completed = False
         self.failed = False
         self.time = 0.0
-        self.intro_timer = 0.0
+        # No contact damage during the fade-in window — the player can't
+        # react yet. Lifted from the retired in-level intro card; tied to
+        # the R8 fade so the grace lasts exactly as long as the visual
+        # transition.
+        self._first_frame_grace = 0.0
         self._saved = False
 
         # Escape-room state.
@@ -255,7 +260,6 @@ class LevelManager:
         self._hit_pause = 0.0
 
         self.title_font = theme.font(90)
-        self.big_font = theme.font(110)
         self.hint_font = theme.font(36)
         self.label_font = theme.font(28)
         self.banner_font = theme.font(34)
@@ -339,7 +343,7 @@ class LevelManager:
         self.completed = False
         self.failed = False
         self.time = 0.0
-        self.intro_timer = 3.0
+        self._first_frame_grace = FADE_IN_TIME
         self.level_id = entry.id
         self.level_title = entry.title
         self.level_tagline = entry.tagline
@@ -565,8 +569,9 @@ class LevelManager:
 
     def update(self, dt):
         self.time += dt
-        if self.intro_timer > 0:
-            self.intro_timer = max(0.0, self.intro_timer - dt)
+        if self._first_frame_grace > 0:
+            self._first_frame_grace = max(
+                0.0, self._first_frame_grace - dt)
 
         self.camera.update_shake(dt)
         self.particles.update(dt)
@@ -629,7 +634,7 @@ class LevelManager:
         self._handle_key()
 
         if (self.boss is not None and self.boss.hp > 0
-                and self.intro_timer <= 0
+                and self._first_frame_grace <= 0
                 and self.player.invuln_timer <= 0
                 and self.boss.hitbox.colliderect(self.player.hitbox)):
             self.player.take_damage(BOSS_TOUCH_DAMAGE)
@@ -650,7 +655,7 @@ class LevelManager:
             if en.hp < prev:
                 self._emit_enemy_hit(en)
             en._last_hp_for_fx = en.hp
-            if (self.intro_timer <= 0
+            if (self._first_frame_grace <= 0
                     and self.player.invuln_timer <= 0
                     and en.hitbox.colliderect(self.player.hitbox)):
                 self.player.take_damage(en.touch_damage)
@@ -785,8 +790,8 @@ class LevelManager:
                 gate.open()
 
     def _handle_hazards(self):
-        # No damage during the intro card — the player can't react yet.
-        if self.intro_timer > 0 or self.player.invuln_timer > 0:
+        # No damage during the fade-in — the player can't react yet.
+        if self._first_frame_grace > 0 or self.player.invuln_timer > 0:
             return
         for sp in self.spikes:
             if sp.deadly and sp.hitbox.colliderect(self.player.hitbox):
@@ -919,7 +924,6 @@ class LevelManager:
         if self.boss is not None:
             self.draw_boss_health(screen)
         self._draw_objective(screen)
-        self._draw_intro(screen)
 
         if self.completed:
             self.draw_end_overlay(
@@ -1144,33 +1148,6 @@ class LevelManager:
         panel.fill((*theme.BG, 150))
         screen.blit(panel, bg)
         screen.blit(surf, rect)
-
-    def _draw_intro(self, screen):
-        if self.intro_timer <= 0:
-            return
-        title = self.level_title or "LEVEL"
-        sub = self.level_tagline
-        # Fade out over the last second.
-        alpha = int(255 * min(1.0, self.intro_timer))
-        cx, cy = self.width // 2, self.height // 2 - 60
-
-        t = self.big_font.render(title, True, theme.TITLE_C)
-        t.set_alpha(alpha)
-        screen.blit(t, t.get_rect(center=(cx, cy)))
-        if sub:
-            s = self.hint_font.render(sub, True, theme.MUTED)
-            s.set_alpha(alpha)
-            screen.blit(s, s.get_rect(center=(cx, cy + 90)))
-
-        # Quick controls reminder during the first second
-        if self.intro_timer > 2.0:
-            d = theme.HINT_DOT
-            hint = self.hint_font.render(
-                f"WASD/Arrows to move & aim  {d}  Space to shoot  {d}  "
-                f"Shift for ability  {d}  E to use",
-                True, theme.MUTED)
-            hint.set_alpha(alpha)
-            screen.blit(hint, hint.get_rect(center=(cx, cy + 160)))
 
     def draw_end_overlay(self, screen, text, color):
         overlay = pygame.Surface(screen.get_size())

@@ -10,7 +10,9 @@ from menu import (
     MainMenu, SettingsMenu, LevelMenu, CharacterMenu, PauseMenu)
 from levels import LevelManager
 from editor import LevelEditor
+from loading_screen import LoadingScreen
 import audio
+import level_catalog
 
 # Setup & Initalisation
 pygame.init()
@@ -61,6 +63,7 @@ _BGM_FOR_STATE = {
     "settings": "menu",
     "char_select": "menu",
     "lvls": "menu",
+    "loading": "menu",
     "editor": "menu",
 }
 
@@ -72,6 +75,14 @@ _BGM_FOR_STATE = {
 game_state = "menu"
 return_state = "lvls"
 current_character = "c_wiz"
+
+# Loading screen is shown only on first entry into a level (level menu
+# or editor Test); R-retry and pause-restart deliberately bypass it via
+# their direct level_manager.load_level() calls. The pending_* fields
+# stash the (level_id, return_to) pair until the screen finishes.
+loading_screen = None
+pending_level_id = None
+pending_return_to = "lvls"
 
 # Threaded update flow. The worker writes into update_state; the main
 # loop polls each frame and renders an animated status. phase is what
@@ -120,18 +131,37 @@ def _run_update():
 
 
 def _start_level(level_id, return_to="lvls"):
-    """Load level by id (catalog string) and switch into the game state.
+    """Push to the loading screen for ``level_id``; the actual load
+    happens when the screen finishes (see ``_finish_loading``).
     ``return_to`` is what we'll switch to when the level ends."""
-    global game_state, return_state
+    global game_state, loading_screen, pending_level_id, pending_return_to
+    entry = level_catalog.find(level_id)
+    if entry is None:
+        # Unknown id — route to wherever this launch came from, mirroring
+        # the failure branch _finish_loading uses below.
+        if return_to == "editor":
+            editor.reset_pointer_state()
+            game_state = "editor"
+        else:
+            _to_level_menu()
+        return
+    loading_screen = LoadingScreen(
+        SCREEN_W, SCREEN_H, entry, current_character)
+    pending_level_id = level_id
+    pending_return_to = return_to
+    game_state = "loading"
+
+
+def _finish_loading():
+    """Run the deferred ``load_level`` and hand off to the game state.
+    Bad/empty/missing level files route back to the launch origin —
+    same B17/B19/B20 "editor Test returns to editor" contract."""
+    global game_state, return_state, loading_screen, pending_level_id
+    level_id = pending_level_id
+    return_to = pending_return_to
+    loading_screen = None
+    pending_level_id = None
     if not level_manager.load_level(level_id, current_character):
-        # Bad/empty/missing level file — don't strand the state machine
-        # in "game" with player=None (update() would crash). Route the
-        # failure to wherever this launch came from, mirroring
-        # _leave_game(): an editor Test that can't load must land back
-        # in the editor canvas, not the level menu, or the user is
-        # bounced past the editor — the same B17/B19/B20 "editor Test
-        # returns to editor" contract. return_state isn't set until the
-        # success path below, so key off the return_to parameter here.
         if return_to == "editor":
             editor.reset_pointer_state()
             game_state = "editor"
@@ -208,6 +238,17 @@ while running:
                 # moved on.
                 main_menu.clear_status()
                 game_state = "menu"
+            elif game_state == "loading":
+                # Cancel the pending level launch and bail back to the
+                # origin (level menu, or editor if the editor's Test
+                # button kicked this off).
+                loading_screen = None
+                pending_level_id = None
+                if pending_return_to == "editor":
+                    editor.reset_pointer_state()
+                    game_state = "editor"
+                else:
+                    _to_level_menu()
             elif game_state == "paused":
                 game_state = "game"
             elif game_state == "game":
@@ -302,6 +343,12 @@ while running:
             action = level_menu.handle_input(event)
             if action:
                 _start_level(action)
+
+        # Loading screen — Enter / Space / Esc / click skip ahead. The
+        # screen also auto-advances on its own timer in the draw block.
+        elif game_state == "loading":
+            if loading_screen is not None:
+                loading_screen.handle_input(event)
 
         # Pause overlay
         elif game_state == "paused":
@@ -409,6 +456,13 @@ while running:
         character_menu.draw(screen, current_character)
     elif game_state == "lvls":
         level_menu.draw(screen)
+    elif game_state == "loading":
+        if loading_screen is not None:
+            loading_screen.update(dt)
+            loading_screen.draw(screen)
+            if loading_screen.done:
+                # Finalise the deferred load; next frame draws the level.
+                _finish_loading()
     elif game_state == "editor":
         editor.update(dt)
         editor.draw(screen)
