@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## v0.4.0
+
+Adds the second new built-in level for the v1.0.0 cut: **Level 5 —
+"The Sunken Archive"**, the largest map shipped to date and the first
+with an optional side area.
+
+### Content
+
+- Level 5 "The Sunken Archive": a five-room library-ruin (~55×80) with
+  a bookshelf-lined atrium (player spawn, lever 1), a two-spike-row
+  crossing chamber (pressure plate past the trap), a vault antechamber
+  holding the key and a second lever, a small enclosed reading-room
+  vestibule reachable from the antechamber but not required to clear
+  the level, and a boss arena with the exit. Three reading-order
+  trigger/gate pairs chain the mandatory path: lever → plate → lever
+  open the gates atrium → crossing → vault → boss arena. Loads via
+  the existing generic glyph dispatch in `levels.py` — no code
+  changes.
+
 ## v0.3.0
 
 Adds the first new built-in level since v0.1: **Level 4 — "The

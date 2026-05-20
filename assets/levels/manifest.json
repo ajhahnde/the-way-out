@@ -27,6 +27,13 @@
       "title": "LEVEL 4",
       "tagline": "The Foundry",
       "music": "ingame"
+    },
+    {
+      "id": "level_5",
+      "file": "level_5.txt",
+      "title": "LEVEL 5",
+      "tagline": "The Sunken Archive",
+      "music": "ingame"
     }
   ]
 }
