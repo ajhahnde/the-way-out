@@ -89,6 +89,9 @@ class LevelEditor:
     # Toolbar
     TOOLBAR_H = 110
 
+    # Load-picker modal: one list row's height.
+    PICKER_ROW_H = 56
+
     # Default grid for a fresh level (with auto-walled border)
     DEFAULT_COLS = 30
     DEFAULT_ROWS = 20
@@ -168,6 +171,12 @@ class LevelEditor:
         self.request_test = False
         self.test_level_id = None
 
+        # Load picker (modal overlay listing saved custom maps). Closed
+        # by default; opened from the toolbar's Load button.
+        self.picker_open = False
+        self.picker_entries = []
+        self.picker_scroll = 0
+
         self.new_level()
         self._layout_palette()
         self._build_toolbar_layout()
@@ -246,6 +255,7 @@ class LevelEditor:
         self._box_erase = False
         self._mouse_buttons = [False, False, False]
         self._last_painted_cell = None
+        self.picker_open = False
         self._palette_anim = 0.0
         self._layout_palette()
 
@@ -312,7 +322,7 @@ class LevelEditor:
         # feels continuous (event-driven would tick once per repeat).
         pan_speed = TILE_SIZE * 12 * dt  # ~12 tiles/sec
         keys = pygame.key.get_pressed()
-        if not self.editing_name:
+        if not self.editing_name and not self.picker_open:
             if keys[pygame.K_a] or keys[pygame.K_LEFT]:
                 self.cam_x -= pan_speed
             if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
@@ -345,6 +355,9 @@ class LevelEditor:
     def handle_input(self, event):
         """Return ``'back'`` to leave the editor, ``'test'`` to enter
         game state with the currently-saved level, or ``None``."""
+        if self.picker_open:
+            return self._handle_picker_input(event)
+
         if event.type == pygame.KEYDOWN:
             if self.editing_name:
                 if event.key == pygame.K_RETURN:
@@ -473,6 +486,8 @@ class LevelEditor:
                         # never launches a test session (F5 worked
                         # because it returned _do_test() directly).
                         return self._do_test()
+                    elif name == 'load':
+                        self._open_picker()
                     elif name == 'clear':
                         self.new_level(self.cols, self.rows, self.name)
                         self._flash("Cleared")
@@ -693,6 +708,136 @@ class LevelEditor:
         self.message = msg
         self.message_timer = secs
 
+    # --- load picker (modal) ------------------------------------------
+
+    def _open_picker(self):
+        """Open the modal Load picker over the canvas.
+
+        Lists the player's saved custom maps only (built-in levels are
+        deliberately excluded — the picker exists to *reopen what you
+        saved*). ``_scan_custom`` is the same scan the level menu uses,
+        so a map saved this session shows up without a restart."""
+        self.picker_entries = level_catalog._scan_custom()
+        self.picker_scroll = 0
+        self.picker_open = True
+
+    def _picker_panel(self):
+        """Centred rect for the modal Load-picker panel."""
+        w = min(560, self.width - 120)
+        h = min(620, self.height - 160)
+        rect = pygame.Rect(0, 0, w, h)
+        rect.center = (self.width // 2, self.height // 2)
+        return rect
+
+    def _picker_list_rect(self):
+        """Scrolling-list area inside the panel (below the title, above
+        the footer hint). Rows are clipped to this rect."""
+        panel = self._picker_panel()
+        return pygame.Rect(panel.left, panel.top + 84,
+                           panel.width, panel.height - 84 - 52)
+
+    def _picker_visible_count(self):
+        return max(1, self._picker_list_rect().height // self.PICKER_ROW_H)
+
+    def _picker_rows(self):
+        """``(rect, entry)`` for every list row, in catalog order.
+
+        Rows are positioned absolutely against ``picker_scroll``; rows
+        outside the list area simply fall outside ``_picker_list_rect``
+        and the caller clips them. Shared by draw and input so hit-test
+        and render never disagree."""
+        lr = self._picker_list_rect()
+        rows = []
+        for i, entry in enumerate(self.picker_entries):
+            y = lr.top + (i - self.picker_scroll) * self.PICKER_ROW_H
+            rect = pygame.Rect(lr.left + 24, y,
+                               lr.width - 48, self.PICKER_ROW_H)
+            rows.append((rect, entry))
+        return rows
+
+    def _scroll_picker(self, delta):
+        max_scroll = max(0, len(self.picker_entries)
+                         - self._picker_visible_count())
+        self.picker_scroll = max(
+            0, min(self.picker_scroll + delta, max_scroll))
+
+    def _handle_picker_input(self, event):
+        """Drive the modal Load picker. Always returns ``None`` — the
+        picker never leaves the editor or starts a test."""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.picker_open = False
+            return None
+
+        if event.type == pygame.MOUSEWHEEL:
+            if event.y:
+                self._scroll_picker(-1 if event.y > 0 else 1)
+            return None
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 4:        # wheel up
+                self._scroll_picker(-1)
+                return None
+            if event.button == 5:        # wheel down
+                self._scroll_picker(1)
+                return None
+            if event.button != 1:
+                return None
+            if not self._picker_panel().collidepoint(event.pos):
+                # Click off the panel dismisses the picker.
+                self.picker_open = False
+                return None
+            list_rect = self._picker_list_rect()
+            if list_rect.collidepoint(event.pos):
+                for rect, entry in self._picker_rows():
+                    if rect.collidepoint(event.pos):
+                        self.open_level(entry)
+                        self._flash(f"Loaded {entry.title}")
+                        self.picker_open = False
+                        break
+        return None
+
+    def _draw_picker(self, screen):
+        """Modal overlay: a centred panel listing saved custom maps."""
+        dim = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        dim.fill((*theme.BG, 210))
+        screen.blit(dim, (0, 0))
+
+        panel = self._picker_panel()
+        pygame.draw.rect(screen, theme.shade(theme.BG, 6), panel,
+                         border_radius=10)
+        pygame.draw.rect(screen, theme.LINE_C, panel, 2, border_radius=10)
+
+        title = self.font.render("LOAD MAP", True, theme.TITLE_C)
+        screen.blit(title, title.get_rect(
+            midtop=(panel.centerx, panel.top + 22)))
+
+        list_rect = self._picker_list_rect()
+        if not self.picker_entries:
+            empty = self.label_font.render(
+                "No custom maps yet — save one first", True, theme.MUTED)
+            screen.blit(empty, empty.get_rect(center=list_rect.center))
+        else:
+            prev_clip = screen.get_clip()
+            screen.set_clip(list_rect)
+            mp = pygame.mouse.get_pos()
+            for rect, entry in self._picker_rows():
+                if (rect.bottom < list_rect.top
+                        or rect.top > list_rect.bottom):
+                    continue
+                hov = (rect.collidepoint(mp)
+                       and list_rect.collidepoint(mp))
+                col = theme.ACCENT if hov else theme.INK
+                name = self.head_font.render(entry.title, True, col)
+                screen.blit(name, name.get_rect(
+                    midleft=(rect.left + 16, rect.centery)))
+            screen.set_clip(prev_clip)
+
+        hint = self.hint_font.render(
+            "Click a map to load   ·   Esc cancel", True, theme.MUTED)
+        screen.blit(hint, hint.get_rect(
+            midbottom=(panel.centerx, panel.bottom - 16)))
+
     # --- draw ---------------------------------------------------------
 
     def draw(self, screen):
@@ -709,6 +854,8 @@ class LevelEditor:
         self._draw_palette(screen)
         self._draw_toolbar(screen)
         self._draw_message(screen)
+        if self.picker_open:
+            self._draw_picker(screen)
 
     # ----- canvas -----------------------------------------------------
 
@@ -1044,6 +1191,7 @@ class LevelEditor:
             ('border', "Border", 140, 'tool'),
             ('clear',  "Clear", 130, 'danger'),
             ('test',   "Test (F5)", 180, 'tool'),
+            ('load',   "Load", 130, 'tool'),
             ('save',   "Save (Ctrl+S)", 220, 'tool'),
         ]
         right = self.toolbar_rect.right - 20

@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.6.0
+
+Lets the level editor **reopen a custom map you saved**, closing the
+loop on the editor as a community-UGC feature — until now a saved map
+could be played but never edited again.
+
+### Editor
+
+- New **Load** button in the editor toolbar. It opens a picker listing
+  every custom map you have saved; click one to load it onto the canvas
+  and keep editing. Press Esc or click outside to dismiss.
+- The picker scrolls (mouse wheel) when you have more saved maps than
+  fit on screen, and shows a hint when you have none yet.
+
 ## v0.5.0
 
 Gives every playable character a distinct **signature ability** on a
