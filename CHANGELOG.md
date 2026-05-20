@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.2.13
+
+A maintenance release. No gameplay, tools, or save-file format changes;
+existing saves and custom levels load as-is.
+
+### Fixes
+
+- Update flow: on the packaged macOS `.app`, clicking **UPDATE** in the
+  main menu no longer leaves the old game window open next to the
+  freshly launched one. The post-update restart now hands off via
+  `/usr/bin/open -n` + `SystemExit(0)` (mirroring the existing
+  `/Applications` relocation path in `launcher.py`) instead of
+  `os.execv`'ing the bundle's bootloader — only the new instance
+  survives. Dev runs (`python main.py` / `python launcher.py`) still
+  restart via `os.execv` as before.
+
 ## v0.2.12
 
 A level-editor polish release. No gameplay or save-file format

@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 import threading
 
@@ -353,7 +354,25 @@ while running:
             main_menu.draw(screen)
             pygame.display.flip()
             pygame.time.delay(900)
-            pygame.quit()                              # before execv
+            pygame.quit()
+            # On a PyInstaller --windowed macOS bundle, os.execv re-execs
+            # the bootloader from inside its Python child while the parent
+            # bootloader keeps its NSApplication alive — net result: two
+            # windows. `open -n` + SystemExit hands off cleanly via
+            # LaunchServices so only the new instance survives. Mirrors
+            # launcher._relocate_to_applications().
+            bundle = None
+            if getattr(sys, "frozen", False) and sys.platform == "darwin":
+                contents_macos = os.path.dirname(
+                    os.path.realpath(sys.executable))
+                candidate = os.path.dirname(
+                    os.path.dirname(contents_macos))
+                if (candidate.endswith(".app")
+                        and os.path.isdir(candidate)):
+                    bundle = candidate
+            if bundle is not None:
+                subprocess.Popen(["/usr/bin/open", "-n", bundle])
+                raise SystemExit(0)
             if getattr(sys, "frozen", False):
                 os.execv(sys.executable, [sys.executable])
             else:
