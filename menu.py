@@ -204,6 +204,7 @@ class MainMenu:
             mouse_pos = pygame.mouse.get_pos()
             for btn in self.buttons:
                 if btn["rect"].collidepoint(mouse_pos):
+                    audio.play("menu_confirm")
                     return btn["action"]
         return None
 
@@ -300,6 +301,7 @@ class SettingsMenu:
                         pygame.display.toggle_fullscreen()
                         self.update_buttons()
 
+                    audio.play("menu_confirm")
                     return btn["action"]
         return None
 
@@ -429,6 +431,7 @@ class LevelMenu:
             mouse_pos = pygame.mouse.get_pos()
             for btn in self.entries:
                 if btn["rect"] and btn["rect"].collidepoint(mouse_pos):
+                    audio.play("menu_confirm")
                     return btn["action"]
         return None
 
@@ -643,6 +646,7 @@ class CharacterMenu:
             mouse_pos = pygame.mouse.get_pos()
             for btn in self.character:
                 if btn["rect"].collidepoint(mouse_pos):
+                    audio.play("menu_confirm")
                     return btn["action"]
         return None
 
@@ -707,5 +711,6 @@ class PauseMenu:
             mp = pygame.mouse.get_pos()
             for btn in self.buttons:
                 if btn["rect"].collidepoint(mp):
+                    audio.play("menu_confirm")
                     return btn["action"]
         return None

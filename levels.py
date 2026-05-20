@@ -641,6 +641,7 @@ class LevelManager:
         for en in [e for e in self.enemy_sprites if e is not self.boss]:
             if en.hp <= 0:
                 self._emit_enemy_death(en)
+                audio.play("enemy_death")
                 en.kill()
                 continue
             # Edge-detect each enemy's HP so a projectile hit puffs even
@@ -671,6 +672,7 @@ class LevelManager:
                 self.camera.shake(2, 0.08)
                 self._hit_pause = max(self._hit_pause, HIT_PAUSE_BOSS_HIT)
                 self._emit_boss_hit()
+                audio.play("boss_hit")
             self._last_boss_hp = self.boss.hp
 
         if self.boss is not None and self.boss.hp <= 0:
@@ -798,6 +800,7 @@ class LevelManager:
             self.has_key = True
             self.key_item.kill()
             self.key_item = None
+            audio.play("key_pickup")
 
     # --- draw --------------------------------------------------------
 

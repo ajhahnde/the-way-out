@@ -12,6 +12,7 @@ from settings import (
     TILE_SIZE, SPIKE_CYCLE, SPIKE_DANGER_TIME, SPIKE_WARN_TIME,
     PLATE_TRIGGER_DELAY,
 )
+import audio
 
 TS = TILE_SIZE
 
@@ -131,6 +132,7 @@ class Lever(pygame.sprite.Sprite):
             return False
         self.activated = True
         self.image = self._imgs[True]
+        audio.play("lever_click")
         return True
 
 
@@ -184,6 +186,7 @@ class Gate(pygame.sprite.Sprite):
         self.opened = True
         self.obstacle_group.remove(self)
         self.image = self._imgs[True]
+        audio.play("gate_open")
 
 
 class KeyItem(pygame.sprite.Sprite):
@@ -285,6 +288,7 @@ class PressurePlate(pygame.sprite.Sprite):
         if self.charge >= PLATE_TRIGGER_DELAY:
             self.activated = True
             self.image = self._imgs[True]
+            audio.play("plate_press")
             return True
         return False
 

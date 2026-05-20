@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## v0.9.0
+
+Hits, abilities, doors and pickups now have sound. Adds 18
+synthesised chiptune-style sound effects covering every gameplay
+event and every menu confirmation, plus the missing call sites for
+the level's interactables.
+
+### Audio
+
+- New sound effects across the board: player and enemy hits, enemy
+  and boss death, the boss's own hit, all five character signature
+  abilities (Wizard slow, Penguin shield, Elf volley, Shiggy dash,
+  Wolf sprint), shoot, level complete and player death.
+- Levers, gates, pressure plates and the key now make sound when you
+  use them.
+- Menu confirmations beep when you click a button. The Settings
+  **Sound** toggle silences both music and effects.
+
+### Tools
+
+- New `scripts/gen_sfx.py` deterministically (re)generates all 18 SFX
+  WAV files using only stdlib `wave` + `math`, so a tuning tweak ships
+  by running the script and committing the changed assets. Output
+  lives under `assets/audio/sfx/`.
+
 ## v0.8.0
 
 Combat now reads — every hit registers. Adds game-feel polish across
