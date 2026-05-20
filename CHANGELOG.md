@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.3.0
+
+Adds the first new built-in level since v0.1: **Level 4 — "The
+Foundry"**, lifting the campaign past the three-room demo line.
+
+### Content
+
+- Level 4 "The Foundry": a four-chamber forge map (~50×70) with a
+  bellows-hall entry, a spike-gauntlet pressure-plate puzzle, a key
+  vault, and a boss arena. Three reading-order trigger/gate pairs
+  chain the chambers: a lever opens the gate from the bellows hall
+  into the spike gauntlet; a pressure plate hidden past the southern
+  spike row opens the gate into the key vault; a second lever in the
+  vault opens the gate into the boss arena. Loads via the existing
+  generic glyph dispatch in `levels.py` — no code changes.
+
 ## v0.2.15
 
 A maintenance release. No gameplay, tools, or save-file format

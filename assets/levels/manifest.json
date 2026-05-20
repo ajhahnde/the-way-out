@@ -20,6 +20,13 @@
       "title": "LEVEL 3",
       "tagline": "The Plate Tomb",
       "music": "ingame"
+    },
+    {
+      "id": "level_4",
+      "file": "level_4.txt",
+      "title": "LEVEL 4",
+      "tagline": "The Foundry",
+      "music": "ingame"
     }
   ]
 }
