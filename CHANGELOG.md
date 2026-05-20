@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## v0.2.12
+
+A level-editor polish release. No gameplay or save-file format
+changes; existing saves and custom levels load as-is.
+
+### Tools
+
+- Level editor: the tile palette is now a hover-driven drawer. By
+  default only a 44 px rail sits at the right edge — showing a
+  thumbnail of the currently-selected tile and a vertical "PALETTE"
+  label — so the canvas has the full width to work in. Move the
+  cursor over the rail (or click it) and the drawer slides out to
+  its full size with the tile grid, category headers, and the
+  interactive `<` `>` variant preview added in v0.2.10. Move the
+  cursor away and it slides back. The drawer never reflows the
+  canvas: it overlays on top, so painting near the right edge
+  stays unaffected. Esc / Test / window-focus loss always returns
+  to the collapsed state.
+
 ## v0.2.11
 
 Maintenance release. No gameplay, tools, or save-file format changes;

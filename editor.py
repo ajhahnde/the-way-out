@@ -69,10 +69,17 @@ class LevelEditor:
     # Palette layout. Cells are square thumbnails; the category headers
     # sit between them. CELL / CELL_GAP are sized so six columns fill
     # the narrow palette exactly: 6*CELL + 5*CELL_GAP == PALETTE_W - 2*PAD.
+    # PALETTE_W is the expanded panel content width; PALETTE_GRIP_W is
+    # the always-visible collapsed rail. Total panel width when the
+    # drawer is expanded = PALETTE_GRIP_W + PALETTE_W.
     PALETTE_W = 330
+    PALETTE_GRIP_W = 44
     PALETTE_PAD = 18
     CELL = 44
     CELL_GAP = 6
+
+    # Hover-drawer animation seconds (linear). 0.14 ≈ 8 frames at 60 fps.
+    PALETTE_ANIM_TIME = 0.14
 
     # Selected-tile preview panel: a large sprite plus the < > buttons
     # that step its variant.
@@ -99,15 +106,21 @@ class LevelEditor:
         self.hint_font = theme.font(20)
         self.head_font = theme.font(26)
 
-        # Geometry — canvas fills everything left of the palette and
-        # above the toolbar.
-        self.palette_rect = pygame.Rect(
-            width - self.PALETTE_W, 0,
-            self.PALETTE_W, height - self.TOOLBAR_H)
+        # Geometry — canvas fills everything left of the collapsed
+        # palette rail and above the toolbar. The rail is the
+        # always-visible portion of the drawer; the rest of the panel
+        # slides in as an overlay over the canvas on hover, so the
+        # canvas extent never reflows. palette_rect / _grip_rect are
+        # placeholders here and get their real coordinates from
+        # _layout_palette() once self._palette_anim is initialised.
         self.canvas_rect = pygame.Rect(
-            0, 0, width - self.PALETTE_W, height - self.TOOLBAR_H)
+            0, 0,
+            width - self.PALETTE_GRIP_W,
+            height - self.TOOLBAR_H)
         self.toolbar_rect = pygame.Rect(
             0, height - self.TOOLBAR_H, width, self.TOOLBAR_H)
+        self.palette_rect = pygame.Rect(0, 0, 0, 0)
+        self._grip_rect = pygame.Rect(0, 0, 0, 0)
 
         # State that resets per-level
         self.grid = []
@@ -124,7 +137,15 @@ class LevelEditor:
         self.selected_variant = 1
         self._palette_rects = []        # list of (pygame.Rect, char)
         self._variant_btn_rects = {}    # 'prev'/'next' -> pygame.Rect
-        self._tile_thumb_cache = {}     # (char, variant) -> Surface
+        self._tile_thumb_cache = {}     # (char, variant, size) -> Surface
+
+        # Hover-drawer state: 0.0 = collapsed rail, 1.0 = fully expanded.
+        # _layout_palette() projects this onto _grip_rect / palette_rect
+        # so the existing _build_palette_layout() math (B25) keeps
+        # working unchanged regardless of where the drawer sits.
+        self._palette_anim = 0.0
+        self._palette_label_surf = None  # cached vertical letter stack
+        self._palette_label_col = None   # last colour the cache was built for
 
         # Toolbar / buttons
         self._toolbar_rects = {}        # name -> pygame.Rect
@@ -148,7 +169,7 @@ class LevelEditor:
         self.test_level_id = None
 
         self.new_level()
-        self._build_palette_layout()
+        self._layout_palette()
         self._build_toolbar_layout()
 
     def new_level(self, cols=None, rows=None, name=None):
@@ -217,11 +238,37 @@ class LevelEditor:
         focus loss) would otherwise keep ``_box_start`` / a stuck
         ``_mouse_buttons`` entry set and commit a spurious box-fill on
         the next visit. ``main`` calls this whenever the editor (re)gains
-        or loses control."""
+        or loses control. Snapping the drawer closed at the same time
+        means the user always lands on the collapsed rail when they
+        come back, matching the "default smaller, hover to expand"
+        intent of B27."""
         self._box_start = None
         self._box_erase = False
         self._mouse_buttons = [False, False, False]
         self._last_painted_cell = None
+        self._palette_anim = 0.0
+        self._layout_palette()
+
+    # --- palette geometry (drawer) ------------------------------------
+
+    def _layout_palette(self):
+        """Place ``_grip_rect`` and ``palette_rect`` from ``_palette_anim``.
+
+        ``canvas_rect`` is permanent — set once in ``__init__`` — and
+        never reflows. The drawer slides in from the right: at anim=0
+        ``palette_rect`` sits off-screen to the right of the grip, so
+        no palette tile click can land while collapsed; at anim=1 the
+        palette is flush with the screen's right edge, exactly where
+        the fixed 330 px panel used to be."""
+        panel_x = round(
+            (self.width - self.PALETTE_GRIP_W)
+            - self.PALETTE_W * self._palette_anim)
+        h = self.height - self.TOOLBAR_H
+        self._grip_rect = pygame.Rect(
+            panel_x, 0, self.PALETTE_GRIP_W, h)
+        self.palette_rect = pygame.Rect(
+            panel_x + self.PALETTE_GRIP_W, 0, self.PALETTE_W, h)
+        self._build_palette_layout()
 
     # --- frame ---------------------------------------------------------
 
@@ -231,6 +278,34 @@ class LevelEditor:
             self.message_timer = max(0.0, self.message_timer - dt)
             if self.message_timer == 0:
                 self.message = ""
+
+        # Drawer hover-state animation. The drawer expands while the
+        # cursor is over the rail or the panel body and contracts when
+        # it leaves. Gated on no-buttons-held and no-active-box-drag
+        # so a paint stroke aimed at the right edge of the canvas
+        # doesn't open the drawer mid-gesture (which would then block
+        # painting via the _screen_to_cell overlay guard).
+        mx, my = pygame.mouse.get_pos()
+        hot = (
+            mx >= self._grip_rect.left
+            and my < self.height - self.TOOLBAR_H
+            and not any(self._mouse_buttons)
+            and self._box_start is None
+        )
+        target = 1.0 if hot else 0.0
+        if self._palette_anim != target:
+            step = dt / self.PALETTE_ANIM_TIME
+            if self._palette_anim < target:
+                self._palette_anim = min(
+                    target, self._palette_anim + step)
+            else:
+                self._palette_anim = max(
+                    target, self._palette_anim - step)
+            new_x = round(
+                (self.width - self.PALETTE_GRIP_W)
+                - self.PALETTE_W * self._palette_anim)
+            if new_x != self._grip_rect.left:
+                self._layout_palette()
 
         # Camera pan on held keys. Read pressed-state every frame so it
         # feels continuous (event-driven would tick once per repeat).
@@ -354,6 +429,15 @@ class LevelEditor:
         return None
 
     def _click_left(self, mx, my):
+        # Drawer rail: pop open even if the hover signal is flaky
+        # (touchpad scroll wheels, OS-level cursor warps). The rail is
+        # the only mouse target while the drawer is collapsed, so a
+        # click here is unambiguous intent to expand.
+        if self._grip_rect.collidepoint(mx, my):
+            self._palette_anim = 1.0
+            self._layout_palette()
+            return
+
         # Palette
         if self.palette_rect.collidepoint(mx, my):
             for rect, ch in self._palette_rects:
@@ -429,6 +513,11 @@ class LevelEditor:
 
     def _screen_to_cell(self, sx, sy):
         if not self.canvas_rect.collidepoint(sx, sy):
+            return None
+        # canvas_rect now extends under the expanded palette drawer
+        # (B27), so reject any point sitting under the live overlay —
+        # the user is targeting the palette, not a cell.
+        if self._palette_anim > 0 and sx >= self._grip_rect.left:
             return None
         # int() to match _cell_to_screen and the canvas draw loop
         # (both use int(self.cam_*)); a float cam here would shift the
@@ -608,9 +697,11 @@ class LevelEditor:
     def draw(self, screen):
         # Backdrop — canvas/palette/toolbar are shades derived from the
         # shared BG so the split stays one family, not three tuples.
+        # The palette's own backdrop is drawn inside _draw_palette,
+        # *after* _draw_canvas, so the expanded drawer cleanly overlays
+        # the canvas instead of being painted over by it.
         screen.fill(theme.BG)
         pygame.draw.rect(screen, theme.shade(theme.BG, -6), self.canvas_rect)
-        pygame.draw.rect(screen, theme.shade(theme.BG, 10), self.palette_rect)
         pygame.draw.rect(screen, theme.shade(theme.BG, -2), self.toolbar_rect)
 
         self._draw_canvas(screen)
@@ -758,6 +849,21 @@ class LevelEditor:
         }
 
     def _draw_palette(self, screen):
+        # Rail (always visible) — the hover affordance + the only piece
+        # of the drawer shown while it's collapsed.
+        pygame.draw.rect(
+            screen, theme.shade(theme.BG, 4), self._grip_rect)
+        self._draw_palette_grip(screen)
+
+        if self._palette_anim <= 0:
+            return
+
+        # Panel body backdrop — drawn after the canvas so the expanded
+        # drawer cleanly overlays. The 10-shade matches the previous
+        # fixed-panel tone from B25.
+        pygame.draw.rect(
+            screen, theme.shade(theme.BG, 10), self.palette_rect)
+
         # Title
         title = self.font.render("PALETTE", True, theme.TITLE_C)
         screen.blit(title, title.get_rect(
@@ -851,6 +957,58 @@ class LevelEditor:
         for i, line in enumerate(desc_lines[:2]):
             s = self.small_font.render(line, True, theme.MUTED)
             screen.blit(s, (card.left + 16, desc_y + i * 18))
+
+    def _draw_palette_grip(self, screen):
+        """Draw the always-visible rail: a 32×32 thumbnail of the
+        currently-selected tile, a vertical 'PALETTE' letter stack, and
+        — while the drawer is expanded — an ACCENT stripe on the rail's
+        left edge as a hover affordance."""
+        mp = pygame.mouse.get_pos()
+        hot = self._grip_rect.collidepoint(mp)
+
+        # 32×32 selected-tile thumb at the top of the rail so the user
+        # always sees what's currently selected even when the drawer is
+        # closed. Cached via the regular _thumbnail path; size keys
+        # share with the existing palette grid cache only when 32
+        # happens to match CELL-12, which it does (44-12 == 32).
+        thumb = self._thumbnail(
+            self.selected_char, self.selected_variant,
+            large=False, size=32)
+        if thumb is not None:
+            screen.blit(thumb, thumb.get_rect(
+                midtop=(self._grip_rect.centerx,
+                        self._grip_rect.top + 12)))
+
+        # Vertical letter stack — one small_font letter per row,
+        # centred horizontally. ACCENT tint while hovered, MUTED at
+        # rest. The stack surface is cached and only rebuilt when the
+        # colour flips, so the per-frame cost is one blit.
+        col = theme.ACCENT if hot else theme.MUTED
+        if (self._palette_label_surf is None
+                or self._palette_label_col != col):
+            self._palette_label_col = col
+            letters = [theme.text_surface(self.small_font, ch, col)
+                       for ch in "PALETTE"]
+            line_h = self.small_font.get_height() + 2
+            stack = pygame.Surface(
+                (self._grip_rect.width, line_h * len(letters)),
+                pygame.SRCALPHA)
+            for i, s in enumerate(letters):
+                stack.blit(s, s.get_rect(
+                    midtop=(stack.get_width() // 2, i * line_h)))
+            self._palette_label_surf = stack
+        label = self._palette_label_surf
+        screen.blit(label, label.get_rect(
+            midtop=(self._grip_rect.centerx,
+                    self._grip_rect.top + 56)))
+
+        # Accent stripe on the rail's left edge while the drawer is
+        # open — mirrors the toolbar button underline language.
+        if self._palette_anim > 0:
+            pygame.draw.line(
+                screen, theme.ACCENT,
+                (self._grip_rect.left, self._grip_rect.top + 4),
+                (self._grip_rect.left, self._grip_rect.bottom - 4), 2)
 
     def _wrap(self, text, max_w, font):
         words = text.split()
