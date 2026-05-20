@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.2.9
+
+Maintenance release. No gameplay or save-file format changes.
+
+### Repo
+
+- README link points to the correct upstream (`eeco`, not `eecon`).
+- `.gitignore` no longer tracks the local `.eeco/` workspace or the
+  legacy `ajhahnde/` notes directory.
+
 ## v0.2.8
 
 The packaged macOS app now installs itself into `/Applications`. No

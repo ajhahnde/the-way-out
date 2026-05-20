@@ -6,6 +6,8 @@ the way out.
 
 **Version:** v0.2.2 — see [Changelog](CHANGELOG.md)
 
+Build with [eeco](https://github.com/ajhahnde/eeco)
+
 ## Play
 
 ```bash
@@ -15,13 +17,13 @@ python main.py
 
 ## Controls
 
-| Input            | Action            |
-|------------------|-------------------|
-| WASD / Arrows    | Move & aim (4-way)|
-| Space            | Shoot             |
-| Shift            | Dash              |
-| E                | Use / interact    |
-| Esc              | Pause / back      |
+| Input         | Action             |
+| ------------- | ------------------ |
+| WASD / Arrows | Move & aim (4-way) |
+| Space         | Shoot              |
+| Shift         | Dash               |
+| E             | Use / interact     |
+| Esc           | Pause / back       |
 
 ## Characters
 
@@ -38,17 +40,17 @@ in-game editor (`editor.py`) edits them live.
 
 ## Project layout
 
-| Path             | Purpose                                  |
-|------------------|------------------------------------------|
-| `main.py`        | Entry point & game loop                  |
-| `menu.py`        | Title, settings, character & level menus |
-| `levels.py`      | Level loading & runtime                   |
-| `units.py`       | Player & enemy logic                      |
-| `interactables.py` / `static_objects.py` / `tileset.py` | World objects |
-| `editor.py`      | In-game level editor                      |
-| `theme.py`       | Shared palette & UI helpers               |
-| `audio.py`       | Music & SFX                               |
-| `assets/`        | Sprites, audio, fonts, level maps         |
+| Path                                                          | Purpose                                  |
+| ------------------------------------------------------------- | ---------------------------------------- |
+| `main.py`                                                   | Entry point & game loop                  |
+| `menu.py`                                                   | Title, settings, character & level menus |
+| `levels.py`                                                 | Level loading & runtime                  |
+| `units.py`                                                  | Player & enemy logic                     |
+| `interactables.py` / `static_objects.py` / `tileset.py` | World objects                            |
+| `editor.py`                                                 | In-game level editor                     |
+| `theme.py`                                                  | Shared palette & UI helpers              |
+| `audio.py`                                                  | Music & SFX                              |
+| `assets/`                                                   | Sprites, audio, fonts, level maps        |
 
 ## Build (macOS)
 

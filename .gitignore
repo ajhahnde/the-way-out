@@ -18,8 +18,10 @@ venv/
 assets/background/test_bg_1.png
 assets/background/test_bg_2.png
 ajhahnde/
+.eeco
 
 
 build/
 dist/
 *.spec
+/.eeco/
