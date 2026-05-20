@@ -20,6 +20,7 @@ import json
 import os
 import shutil
 import socket
+import ssl
 import tempfile
 import time
 import urllib.error
@@ -38,6 +39,29 @@ LAST_CHECK_FILE = ROOT / ".last_check"        # mtime = last successful check
 _API_COMMIT = f"https://api.github.com/repos/{REPO}/commits/{BRANCH}"
 _ZIP_BASE = f"https://codeload.github.com/{REPO}/zip"
 _HEADERS = {"User-Agent": "the-way-out-updater"}   # GitHub API needs a UA
+
+
+def _ssl_context():
+    """TLS context that actually verifies on stock macOS installs.
+
+    The packaged .app ships Python.framework but no CA bundle, so
+    ``ssl.create_default_context()`` ends up with an empty trust store
+    and every HTTPS call to GitHub fails CERTIFICATE_VERIFY_FAILED —
+    which the urlopen callers below swallow as OSError, leaving the
+    user looking at "Update server unreachable" on a working network.
+    Pin the context to certifi's bundle when it's importable (it is in
+    the frozen build via PyInstaller's --collect-all certifi); fall
+    back to the platform default so dev runs with a system openssl
+    (homebrew, Linux distros) keep working.
+    """
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except (ImportError, OSError):
+        return ssl.create_default_context()
+
+
+_SSL_CTX = _ssl_context()
 
 
 def app_dir() -> Path:
@@ -61,7 +85,8 @@ def remote_sha(timeout: float = 6):
     """Latest commit sha on the branch, or None if offline/blocked."""
     try:
         req = urllib.request.Request(_API_COMMIT, headers=_HEADERS)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(
+                req, timeout=timeout, context=_SSL_CTX) as resp:
             return json.load(resp).get("sha")
     except (urllib.error.URLError, OSError, ValueError, TimeoutError):
         return None
@@ -138,7 +163,8 @@ def should_check(min_interval_s: float = 86400.0) -> bool:
 
 def _download_zip(ref: str, timeout: float) -> bytes:
     req = urllib.request.Request(f"{_ZIP_BASE}/{ref}", headers=_HEADERS)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    with urllib.request.urlopen(
+            req, timeout=timeout, context=_SSL_CTX) as resp:
         return resp.read()
 
 

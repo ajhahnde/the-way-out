@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## v0.2.15
+
+A maintenance release. No gameplay, tools, or save-file format
+changes; existing saves and custom levels load as-is.
+
+### Fixes
+
+- Update flow: in-game **UPDATE** now works on packaged macOS `.app`
+  installs that have no system CA bundle (Intel Macs on stock
+  Monterey, arm64 machines without homebrew openssl). The previous
+  build silently fell back to Python's default verify paths, which
+  point at a `cert.pem` that only the python.org installer creates —
+  so HTTPS to `api.github.com` failed `CERTIFICATE_VERIFY_FAILED`,
+  was swallowed as `OSError`, and the player saw **"Update server
+  unreachable - try again later."** on a working network. The build
+  now bundles `certifi`'s CA roots via PyInstaller's `--collect-all
+  certifi`, and `updater.py` pins its TLS context to
+  `certifi.where()` (with a system-default fallback so dev runs on a
+  homebrew openssl or Linux distro keep working).
+
+## v0.2.14
+
+A maintenance release. No gameplay, tools, or save-file format
+changes; existing saves and custom levels load as-is.
+
+### Fixes
+
+- Level editor: the hover-driven tile palette no longer slides open
+  while the level filename is being edited inline. The hover test
+  now ignores cursor presence over the drawer rail when
+  `editing_name` is true, so typing past the right edge of the field
+  does not accidentally pop the palette out from under the cursor.
+- Update flow: on the packaged macOS `.app`, a post-update restart
+  that can't resolve the bundle path now exits cleanly instead of
+  falling through to `os.execv`. The `os.execv` path on a frozen
+  darwin build could reproduce B28 ("two windows"); the new
+  `SystemExit(0)` branch closes that hole. The user re-launches
+  manually in the rare case the bundle path can't be derived (dev
+  runs and `/Applications` installs are unaffected).
+
 ## v0.2.13
 
 A maintenance release. No gameplay, tools, or save-file format changes;

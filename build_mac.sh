@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 
 PY=".venv/bin/python"                       # NEVER system python3 (3.14)
 [ -x "$PY" ] || { echo "missing $PY"; exit 1; }
-"$PY" -m pip install --quiet --upgrade pyinstaller
+"$PY" -m pip install --quiet --upgrade pyinstaller certifi
 
 APPNAME="The Way Out"
 SEEDPARENT="$(mktemp -d)"; SEED="$SEEDPARENT/_seed"; mkdir -p "$SEED"
@@ -24,6 +24,7 @@ rm -rf build dist "$APPNAME.spec"
   --osx-bundle-identifier de.ajhahn.thewayout \
   --icon assets/icon.icns \
   --collect-all pygame \
+  --collect-all certifi \
   --add-data "$SEED:_seed" \
   launcher.py
 

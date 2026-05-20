@@ -28,7 +28,7 @@ MACH="$(arch -x86_64 "$PY" -c 'import platform;print(platform.machine())')"
 [ "$MACH" = "x86_64" ] \
   || { echo "venv python is not x86_64 under Rosetta (got: $MACH)"; exit 1; }
 
-arch -x86_64 "$PY" -m pip install --quiet --upgrade pyinstaller
+arch -x86_64 "$PY" -m pip install --quiet --upgrade pyinstaller certifi
 
 APPNAME="The Way Out"
 
@@ -57,6 +57,7 @@ arch -x86_64 "$PY" -m PyInstaller --noconfirm --windowed --clean \
   --osx-bundle-identifier de.ajhahn.thewayout \
   --icon assets/icon.icns \
   --collect-all pygame \
+  --collect-all certifi \
   --target-architecture x86_64 \
   --add-data "$SEED:_seed" \
   launcher.py
