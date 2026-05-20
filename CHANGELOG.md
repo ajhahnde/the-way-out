@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v0.2.10
+
+A level-editor polish release. No gameplay or save-file format
+changes; existing saves and custom levels load as-is.
+
+### Tools
+
+- Level editor: the tile palette is narrower, so the canvas has more
+  room to work in. It also gains an interactive preview panel — the
+  selected tile is drawn at a large size with `<` `>` buttons that
+  step through its variants, so a tile and variant can be previewed
+  before being painted. The mouse wheel still cycles variants too.
+
 ## v0.2.9
 
 Maintenance release. No gameplay or save-file format changes.

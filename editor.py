@@ -9,9 +9,10 @@ level menu the next time it's opened.
 Layout (anchored to the screen size, scales with it):
 
 * **Canvas** on the left: scrolling grid, the level being authored.
-* **Palette** on the right: tile thumbnails grouped by category
-  (terrain, special, hazard, enemy, prop). Click to select; the wheel
-  cycles the variant for prop tiles.
+* **Palette** on the right: a narrow strip of tile thumbnails grouped
+  by category (terrain, special, hazard, enemy, prop). Click to select.
+  A preview panel below the grid shows the selected tile at a large
+  size; its ◄ ► buttons (or the mouse wheel) cycle the variant.
 * **Toolbar** at the bottom: file name (click to rename), grid size,
   Save / Test / Clear buttons.
 
@@ -65,12 +66,18 @@ class LevelEditor:
     """The editor surface + state. One instance lives for the whole
     session; ``new_level`` / ``open_level`` reset the grid."""
 
-    # Palette layout. Cells are rendered as square thumbnails with a
-    # 6 px gap; the category headers sit between them.
-    PALETTE_W = 480
+    # Palette layout. Cells are square thumbnails; the category headers
+    # sit between them. CELL / CELL_GAP are sized so six columns fill
+    # the narrow palette exactly: 6*CELL + 5*CELL_GAP == PALETTE_W - 2*PAD.
+    PALETTE_W = 330
     PALETTE_PAD = 18
-    CELL = 56
-    CELL_GAP = 8
+    CELL = 44
+    CELL_GAP = 6
+
+    # Selected-tile preview panel: a large sprite plus the ◄ ► buttons
+    # that step its variant.
+    PREVIEW_SIZE = 64
+    VARIANT_BTN = 30
 
     # Toolbar
     TOOLBAR_H = 110
@@ -116,6 +123,7 @@ class LevelEditor:
         self.selected_char = 'W'
         self.selected_variant = 1
         self._palette_rects = []        # list of (pygame.Rect, char)
+        self._variant_btn_rects = {}    # 'prev'/'next' -> pygame.Rect
         self._tile_thumb_cache = {}     # (char, variant) -> Surface
 
         # Toolbar / buttons
@@ -355,6 +363,13 @@ class LevelEditor:
                     # out of range silently.
                     self.selected_variant = 1
                     return
+            # ◄ ► buttons under the preview panel step the variant the
+            # same way the wheel does (_cycle_variant no-ops when the
+            # selected tile has only one variant).
+            if self._variant_btn_rects['prev'].collidepoint(mx, my):
+                self._cycle_variant(-1)
+            elif self._variant_btn_rects['next'].collidepoint(mx, my):
+                self._cycle_variant(1)
             return
 
         # Toolbar
@@ -721,10 +736,26 @@ class LevelEditor:
                 rect = pygame.Rect(x, y, cell, cell)
                 self._palette_rects.append((rect, ch))
                 x += cell + gap
-            y += cell + gap + 14
+            y += cell + gap + 8
 
-        # Selection info card sits below the last category.
+        # Selected-tile preview panel sits below the last category.
         self._palette_info_y = y + 6
+
+        # Panel geometry: a PREVIEW_SIZE sprite centred in the panel,
+        # flanked by the ◄ ► variant buttons. _draw_palette mirrors
+        # these offsets for the cosmetic parts (name, separator, text).
+        iy = self._palette_info_y
+        ix = self.palette_rect.left + self.PALETTE_PAD
+        pw = self.palette_rect.width - 2 * self.PALETTE_PAD
+        sprite_top = iy + 56
+        self._preview_sprite_pos = (
+            ix + (pw - self.PREVIEW_SIZE) // 2, sprite_top)
+        btn = self.VARIANT_BTN
+        by = sprite_top + (self.PREVIEW_SIZE - btn) // 2
+        self._variant_btn_rects = {
+            'prev': pygame.Rect(ix + 8, by, btn, btn),
+            'next': pygame.Rect(ix + pw - 8 - btn, by, btn, btn),
+        }
 
     def _draw_palette(self, screen):
         # Title
@@ -765,33 +796,61 @@ class LevelEditor:
                       else theme.LINE_C)
             pygame.draw.rect(screen, border, rect, 2, border_radius=6)
 
-        # Selected-tile info card
+        # Selected-tile preview panel — name, a thin separator, a large
+        # sprite flanked by the ◄ ► variant buttons, the variant counter,
+        # then a short description. Same flat visual language as the
+        # CharacterMenu stat block. The buttons step the variant like the
+        # wheel; they grey out for single-variant tiles.
         spec = REGISTRY.get(self.selected_char)
         if spec is None:
             return
         ix = self.palette_rect.left + self.PALETTE_PAD
         iy = self._palette_info_y
         w = self.palette_rect.width - 2 * self.PALETTE_PAD
-        # Flat spec block — no bordered box. Same language as the
-        # CharacterMenu stat block: name, one thin separator, then
-        # quiet detail text.
-        card = pygame.Rect(ix, iy, w, 130)
+        card = pygame.Rect(ix, iy, w, 150)
         name = self.font.render(spec.label, True, theme.TITLE_C)
         screen.blit(name, (card.left + 16, card.top + 10))
         pygame.draw.line(screen, theme.LINE_C,
                          (card.left + 16, card.top + 48),
                          (card.right - 16, card.top + 48), 2)
-        if spec.variant_count > 1:
-            v = self.label_font.render(
-                f"variant {self.selected_variant} / {spec.variant_count}  "
-                f"(scroll to cycle)", True, theme.MUTED)
-            screen.blit(v, (card.left + 16, card.top + 58))
-        # Wrap the description manually (cheap word-wrap)
+
+        # Large sprite preview of the current selection + variant, on a
+        # faint backplate so a dark tile still reads against the panel.
+        sx, sy = self._preview_sprite_pos
+        plate = pygame.Rect(sx, sy, self.PREVIEW_SIZE, self.PREVIEW_SIZE)
+        pygame.draw.rect(screen, theme.shade(theme.BG, 6), plate,
+                         border_radius=6)
+        preview = self._thumbnail(self.selected_char, self.selected_variant,
+                                  large=False, size=self.PREVIEW_SIZE)
+        if preview is not None:
+            screen.blit(preview, (sx, sy))
+
+        # ◄ ► variant buttons — interactive only for multi-variant tiles.
+        has_variants = spec.variant_count > 1
+        for key, glyph in (('prev', "<"), ('next', ">")):
+            rect = self._variant_btn_rects[key]
+            hov = has_variants and rect.collidepoint(mp)
+            col = (theme.ACCENT if hov
+                   else theme.INK if has_variants
+                   else theme.LINE_C)
+            pygame.draw.rect(screen, col, rect, 2, border_radius=6)
+            g = self.head_font.render(glyph, True, col)
+            screen.blit(g, g.get_rect(center=rect.center))
+
+        # Variant counter, centred under the sprite.
+        vtext = (f"variant {self.selected_variant} / {spec.variant_count}"
+                 if has_variants else "single variant")
+        v = self.small_font.render(vtext, True, theme.MUTED)
+        screen.blit(v, v.get_rect(
+            midtop=(card.centerx, sy + self.PREVIEW_SIZE + 8)))
+
+        # Short wrapped description below the panel.
         desc_lines = self._wrap(spec.description, card.width - 30,
                                 self.small_font)
-        for i, line in enumerate(desc_lines[:3]):
+        desc_y = sy + self.PREVIEW_SIZE + 32
+        for i, line in enumerate(desc_lines[:2]):
             s = self.small_font.render(line, True, theme.MUTED)
-            screen.blit(s, (card.left + 16, card.top + 84 + i * 18))
+            screen.blit(s, (card.left + 16, desc_y + i * 18))
 
     def _wrap(self, text, max_w, font):
         words = text.split()
@@ -923,13 +982,15 @@ class LevelEditor:
 
     # --- thumbnail rendering ------------------------------------------
 
-    def _thumbnail(self, char, variant, large):
+    def _thumbnail(self, char, variant, large, size=None):
         """Cached preview surface for one tile.
 
         ``large=True`` returns a TILE_SIZE x TILE_SIZE image suitable
         for the canvas; ``large=False`` returns a thumbnail-sized image
-        for the palette grid."""
-        size = TILE_SIZE if large else self.CELL - 12
+        for the palette grid. An explicit ``size`` overrides both — the
+        selected-tile preview panel uses it for a larger sprite."""
+        if size is None:
+            size = TILE_SIZE if large else self.CELL - 12
         key = (char, variant, size)
         if key in self._tile_thumb_cache:
             return self._tile_thumb_cache[key]
