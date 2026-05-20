@@ -12,7 +12,7 @@ Layout (anchored to the screen size, scales with it):
 * **Palette** on the right: a narrow strip of tile thumbnails grouped
   by category (terrain, special, hazard, enemy, prop). Click to select.
   A preview panel below the grid shows the selected tile at a large
-  size; its ◄ ► buttons (or the mouse wheel) cycle the variant.
+  size; its < > buttons (or the mouse wheel) cycle the variant.
 * **Toolbar** at the bottom: file name (click to rename), grid size,
   Save / Test / Clear buttons.
 
@@ -74,7 +74,7 @@ class LevelEditor:
     CELL = 44
     CELL_GAP = 6
 
-    # Selected-tile preview panel: a large sprite plus the ◄ ► buttons
+    # Selected-tile preview panel: a large sprite plus the < > buttons
     # that step its variant.
     PREVIEW_SIZE = 64
     VARIANT_BTN = 30
@@ -363,7 +363,7 @@ class LevelEditor:
                     # out of range silently.
                     self.selected_variant = 1
                     return
-            # ◄ ► buttons under the preview panel step the variant the
+            # < > buttons under the preview panel step the variant the
             # same way the wheel does (_cycle_variant no-ops when the
             # selected tile has only one variant).
             if self._variant_btn_rects['prev'].collidepoint(mx, my):
@@ -742,7 +742,7 @@ class LevelEditor:
         self._palette_info_y = y + 6
 
         # Panel geometry: a PREVIEW_SIZE sprite centred in the panel,
-        # flanked by the ◄ ► variant buttons. _draw_palette mirrors
+        # flanked by the < > variant buttons. _draw_palette mirrors
         # these offsets for the cosmetic parts (name, separator, text).
         iy = self._palette_info_y
         ix = self.palette_rect.left + self.PALETTE_PAD
@@ -797,7 +797,7 @@ class LevelEditor:
             pygame.draw.rect(screen, border, rect, 2, border_radius=6)
 
         # Selected-tile preview panel — name, a thin separator, a large
-        # sprite flanked by the ◄ ► variant buttons, the variant counter,
+        # sprite flanked by the < > variant buttons, the variant counter,
         # then a short description. Same flat visual language as the
         # CharacterMenu stat block. The buttons step the variant like the
         # wheel; they grey out for single-variant tiles.
@@ -825,7 +825,7 @@ class LevelEditor:
         if preview is not None:
             screen.blit(preview, (sx, sy))
 
-        # ◄ ► variant buttons — interactive only for multi-variant tiles.
+        # < > variant buttons — interactive only for multi-variant tiles.
         has_variants = spec.variant_count > 1
         for key, glyph in (('prev', "<"), ('next', ">")):
             rect = self._variant_btn_rects[key]

@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.2.11
+
+Maintenance release. No gameplay, tools, or save-file format changes;
+existing saves and custom levels load as-is.
+
+### Repo
+
+- Level editor: six source comments described the palette's
+  variant-step buttons as `◄ ►`, but the buttons render — by design —
+  as ASCII `<` `>` (the bundled pixel font has no arrow glyphs).
+  Comments corrected to match the code; no runtime change.
+
 ## v0.2.10
 
 A level-editor polish release. No gameplay or save-file format
