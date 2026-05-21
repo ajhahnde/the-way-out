@@ -1,4 +1,5 @@
 import pygame
+
 from settings import TILE_SIZE
 
 TS = TILE_SIZE

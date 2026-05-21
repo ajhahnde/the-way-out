@@ -40,14 +40,13 @@ from pathlib import Path
 
 import pygame
 
-from settings import TILE_SIZE
-from interactables import Spikes, Lever, Gate, KeyItem, PressurePlate
-from static_objects import TileTextures
-from tiles import REGISTRY, PALETTE_CATEGORIES, chars_for
 import level_catalog
-import tileset
 import theme
-
+import tileset
+from interactables import Gate, KeyItem, Lever, PressurePlate, Spikes
+from settings import TILE_SIZE
+from static_objects import TileTextures
+from tiles import PALETTE_CATEGORIES, REGISTRY, chars_for
 
 # Used both as a directory and as the legal-filename charset.
 SAFE_NAME = re.compile(r"[^a-zA-Z0-9_\-]+")
@@ -218,8 +217,8 @@ class LevelEditor:
         """Load an existing level file into the editor. Used to tweak
         a built-in level or continue work on a custom one."""
         try:
-            with open(entry.file, 'r') as f:
-                lines = [l.rstrip('\n') for l in f if l.strip()]
+            with open(entry.file) as f:
+                lines = [ln.rstrip('\n') for ln in f if ln.strip()]
         except (FileNotFoundError, OSError) as e:
             self._flash(f"Could not open {entry.file}: {e}")
             return
@@ -1338,11 +1337,11 @@ class LevelEditor:
         ]
         right = self.toolbar_rect.right - 20
         self._toolbar_rects = {}
-        for name, label, width, kind in reversed(spec):
+        for name, _label, width, _kind in reversed(spec):
             rect = pygame.Rect(right - width, y + 18, width, h - 36)
             self._toolbar_rects[name] = rect
             right -= width + 12
-        self._toolbar_button_meta = {n: (l, k) for n, l, _w, k in spec}
+        self._toolbar_button_meta = {n: (lbl, k) for n, lbl, _w, k in spec}
 
         # Size +/- arrows (smaller, in the middle of the toolbar)
         mid_x = self._name_rect.right + 30

@@ -1,19 +1,29 @@
 import pygame
-from units import CHARACTER_INFO
+
+import audio
 import level_catalog
 import save
-import audio
 import theme
-from version import VERSION
+
 # Palette, font cache and the shared title / back-hint / hover
 # primitives. Bound to module-private aliases to match the internal
 # naming used by the screens below.
 from theme import (
-    BG, INK, MUTED, ACCENT, TITLE_C, DONE_C, SEL_C, LINE_C,
+    ACCENT,
+    BG,
+    DONE_C,
+    INK,
+    LINE_C,
+    MUTED,
+    SEL_C,
+    TITLE_C,
     measure,
-    draw_title as _draw_title,
-    draw_back_hint as _draw_back_hint,
-    hover_marker as _hover_marker)
+)
+from theme import draw_back_hint as _draw_back_hint
+from theme import draw_title as _draw_title
+from theme import hover_marker as _hover_marker
+from units import CHARACTER_INFO
+from version import VERSION
 
 
 class MainMenu:
@@ -478,7 +488,7 @@ class CharacterMenu:
         #                   still everywhere except the focus.
         self.previews = {}
         self.thumbs = {}
-        for key, cls, label, tagline in CHARACTER_INFO:
+        for key, cls, _label, _tagline in CHARACTER_INFO:
             self.previews[key] = self._load_idle_frames(cls, 220)
             self.thumbs[key] = self._load_idle_frames(cls, 72)
 

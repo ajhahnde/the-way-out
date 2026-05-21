@@ -4,29 +4,52 @@ import zlib
 from collections import deque
 
 import pygame
-from settings import (
-    TILE_SIZE, BOSS_TOUCH_DAMAGE, PLAYER_INVULN_TIME,
-    SPIKE_DAMAGE, LEVER_REACH, SLOW_SCALE,
-    HIT_PAUSE_PLAYER_HIT, HIT_PAUSE_BOSS_HIT,
-    HIT_PAUSE_BOSS_DEATH, HIT_PAUSE_PLAYER_DEATH,
-    PARTICLES_PLAYER_HIT, PARTICLES_ENEMY_HIT, PARTICLES_ENEMY_DEATH,
-    PARTICLES_BOSS_HIT, PARTICLES_BOSS_DEATH, PARTICLES_ABILITY,
-    ABILITY_COLOR_WIZARD, ABILITY_COLOR_PENGUIN, ABILITY_COLOR_ELF,
-    ABILITY_COLOR_SHIGGY, ABILITY_COLOR_WOLF,
-    FADE_IN_TIME, FADE_OUT_TIME,
-)
-from units import (
-    Wizard, Penguin, Elf, Shiggy, Wolf,
-    Boss, BOSS_ROSTER, CHARACTER_INFO, ENEMY_INFO)
-from static_objects import Tile, TileTextures, Prop
-from interactables import Spikes, Lever, Gate, KeyItem, PressurePlate
-from tiles import PROP_CHARS
-from effects import ParticleField, FadeState
-import tileset
+
+import audio
 import level_catalog
 import save
-import audio
 import theme
+import tileset
+from effects import FadeState, ParticleField
+from interactables import Gate, KeyItem, Lever, PressurePlate, Spikes
+from settings import (
+    ABILITY_COLOR_ELF,
+    ABILITY_COLOR_PENGUIN,
+    ABILITY_COLOR_SHIGGY,
+    ABILITY_COLOR_WIZARD,
+    ABILITY_COLOR_WOLF,
+    BOSS_TOUCH_DAMAGE,
+    FADE_IN_TIME,
+    FADE_OUT_TIME,
+    HIT_PAUSE_BOSS_DEATH,
+    HIT_PAUSE_BOSS_HIT,
+    HIT_PAUSE_PLAYER_DEATH,
+    HIT_PAUSE_PLAYER_HIT,
+    LEVER_REACH,
+    PARTICLES_ABILITY,
+    PARTICLES_BOSS_DEATH,
+    PARTICLES_BOSS_HIT,
+    PARTICLES_ENEMY_DEATH,
+    PARTICLES_ENEMY_HIT,
+    PARTICLES_PLAYER_HIT,
+    PLAYER_INVULN_TIME,
+    SLOW_SCALE,
+    SPIKE_DAMAGE,
+    TILE_SIZE,
+)
+from static_objects import Prop, Tile, TileTextures
+from tiles import PROP_CHARS
+from units import (
+    BOSS_ROSTER,
+    CHARACTER_INFO,
+    ENEMY_INFO,
+    Boss,
+    Elf,
+    Penguin,
+    Shiggy,
+    Wizard,
+    Wolf,
+)
 
 # Per-character ability burst colour, keyed by player class.
 _ABILITY_COLORS = {
@@ -377,7 +400,7 @@ class LevelManager:
             BOSS_ROSTER[seed % len(BOSS_ROSTER)]
 
         try:
-            with open(entry.file, 'r') as f:
+            with open(entry.file) as f:
                 raw = [line.rstrip('\n') for line in f if line.strip()]
         except FileNotFoundError:
             print(f"Level file {entry.file} not found!")

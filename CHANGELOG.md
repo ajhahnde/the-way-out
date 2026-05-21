@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## v1.0.1
+
+Repo-hygiene release. No gameplay or save-file changes; existing saves
+and custom levels load as-is. Brings the project's tooling in line with
+its sibling repos (eeco, FlashOS) so it can be forked, built and
+contributed to without the operator in the loop.
+
+### Project
+
+- **LICENSE** — Apache 2.0. The repo had no license until now, which
+  meant the source was legally all-rights-reserved and nobody could
+  fork it. Matches the licence both sibling repos already use.
+- **`pyproject.toml`** — pins the runtime (`pygame==2.6.1`), the build
+  toolchain (`pyinstaller==6.20.0`, `certifi==2026.5.20`) and the dev
+  tools (`ruff==0.15.14`, `pytest==9.0.3`) so a fresh clone resolves to
+  the same versions that produced the v1.0.0 .app. Carries the project's
+  Ruff config (E/F/I/UP/B, 79-col, py312) — `.ruff_cache/` existed in
+  the tree but the config was missing, so contributors couldn't format
+  identically.
+- **GitHub Actions CI** (`.github/workflows/ci.yml`) — two jobs on
+  every push and PR. `check` (ubuntu): `ruff check`, `pytest`, and a
+  headless `import main` smoke under the dummy SDL drivers. `build`
+  (macos): runs `build_mac.sh` and uploads
+  `dist/TheWayOut-mac.zip` as a workflow artifact.
+- **Test suite** (`tests/`, 26 tests) — first ever. Covers the level
+  parser helpers (`_split_cells` / `_cell_variant` / `_pair_id`), the
+  `PressurePlate` charge/trip lifecycle, `Lever.use` single-shot, and
+  the `Character` attack + ability cooldown bookkeeping. Headless via a
+  conftest that wires the dummy SDL drivers before `pygame.init()`.
+
+### Fixed
+
+- `main.py` now wraps the game loop in `if __name__ == "__main__":`,
+  so `import main` is safe in tests and CI. Without this the loop ran
+  at module import and the smoke test would have hung forever.
+- README's version line said `v0.2.2` (stale from v1.0.0); now `v1.0.1`.
+
 ## v1.0.0
 
 The first real release. Bundles the v0.3.0 → v0.10.0 cuts into one

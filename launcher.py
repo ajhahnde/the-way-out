@@ -19,7 +19,7 @@ import subprocess
 import sys
 import traceback
 
-import updater   # bundled bootstrap copy — NOT re-implemented here
+import updater  # bundled bootstrap copy — NOT re-implemented here
 
 APP_NAME = "The Way Out.app"
 APPLICATIONS = "/Applications"

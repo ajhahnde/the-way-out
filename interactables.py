@@ -8,11 +8,15 @@ so the level can blit and collision-test it like any other sprite.
 """
 
 import pygame
-from settings import (
-    TILE_SIZE, SPIKE_CYCLE, SPIKE_DANGER_TIME, SPIKE_WARN_TIME,
-    PLATE_TRIGGER_DELAY,
-)
+
 import audio
+from settings import (
+    PLATE_TRIGGER_DELAY,
+    SPIKE_CYCLE,
+    SPIKE_DANGER_TIME,
+    SPIKE_WARN_TIME,
+    TILE_SIZE,
+)
 
 TS = TILE_SIZE
 

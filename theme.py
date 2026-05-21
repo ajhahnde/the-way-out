@@ -13,6 +13,7 @@ import os
 import random
 
 import pygame
+
 from settings import FONT, TILE_SIZE
 
 # --- palette ---------------------------------------------------------

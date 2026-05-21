@@ -15,10 +15,9 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
-from settings import SAVE_DIR
 import tileset
+from settings import SAVE_DIR
 
 CUSTOM_DIR = SAVE_DIR / "custom_levels"
 MANIFEST_PATH = Path("assets/levels/manifest.json")
@@ -46,16 +45,16 @@ class LevelEntry:
     title: str
     tagline: str
     custom: bool
-    music: Optional[str] = None
-    floor_tile: Optional[str] = None
-    wall_tile: Optional[str] = None
+    music: str | None = None
+    floor_tile: str | None = None
+    wall_tile: str | None = None
 
 
 def _load_manifest():
     """Built-in levels from manifest.json. Empty list on any IO error so
     a missing/corrupt manifest never crashes the menu."""
     try:
-        with open(MANIFEST_PATH, 'r') as f:
+        with open(MANIFEST_PATH) as f:
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return []
@@ -95,7 +94,7 @@ def read_custom_theme(txt_path):
     breaks the level list."""
     sidecar = Path(txt_path).with_suffix(".json")
     try:
-        with open(sidecar, 'r') as f:
+        with open(sidecar) as f:
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return tileset.DEFAULT_THEME

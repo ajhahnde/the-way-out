@@ -1,0 +1,47 @@
+[project]
+name = "the-way-out"
+version = "1.0.1"
+description = "A top-down pixel-art escape-room shooter."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.12"
+authors = [{ name = "ajhahnde" }]
+dependencies = [
+    "pygame==2.6.1",
+]
+
+[project.optional-dependencies]
+# Pinned to what build_mac.sh installs into .venv and what produced
+# v1.0.0's TheWayOut-mac.zip — bumping these requires re-shipping a
+# new launcher build, not just a `git push` via the in-game updater.
+build = [
+    "pyinstaller==6.20.0",
+    "certifi==2026.5.20",
+]
+dev = [
+    "ruff==0.15.14",
+    "pytest==9.0.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/ajhahnde/the-way-out"
+Changelog = "https://github.com/ajhahnde/the-way-out/blob/main/CHANGELOG.md"
+
+# No build-system table on purpose: the-way-out ships as a PyInstaller
+# .app (build_mac.sh) and runs from source in dev. It is not a wheel
+# and is not published to PyPI.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 79
+extend-exclude = ["assets", "build", "dist", ".venv", ".venv-intel"]
+
+[tool.ruff.lint]
+# Defaults (E4/E7/E9, F) plus import-order (I), pyupgrade (UP) and
+# bugbear (B). Wide enough to catch real bugs without forcing a
+# stylistic rewrite of the existing code.
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -4,7 +4,11 @@ A top-down pixel-art escape-room shooter. Pick a character, fight your
 way through locked rooms, work the levers and pressure plates, and find
 the way out.
 
-**Version:** v0.2.2 — see [Changelog](CHANGELOG.md)
+<p align="center">
+  <img src="assets/screenshot.png" alt="The Way Out — character select" width="780">
+</p>
+
+**Version:** v1.0.1 — see [Changelog](CHANGELOG.md)
 
 Build with [eeco](https://github.com/ajhahnde/eeco)
 

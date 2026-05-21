@@ -37,7 +37,7 @@ def _load():
     """The whole save document as a dict. Empty dict on any error or
     if the file holds something other than an object."""
     try:
-        with open(SAVE_FILE, 'r') as f:
+        with open(SAVE_FILE) as f:
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return {}

@@ -18,7 +18,6 @@ Category vocabulary used by the editor's palette grouping:
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 import tileset
 from units import ENEMY_INFO
@@ -39,7 +38,7 @@ class TileSpec:
     description: str
     solid: bool = False
     variant_count: int = 1
-    tileset_category: Optional[str] = None
+    tileset_category: str | None = None
 
 
 # Prop letters → tileset category. The only duplication left between
