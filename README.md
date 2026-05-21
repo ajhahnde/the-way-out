@@ -10,7 +10,7 @@ the way out.
 
 **Version:** v1.0.1 — see [Changelog](CHANGELOG.md)
 
-Build with [eeco](https://github.com/ajhahnde/eeco)
+The Way Out's main purpose is to test and develop [eeco](https://github.com/ajhahnde/eeco).
 
 ## Play
 
