@@ -1,5 +1,100 @@
 # CHANGELOG
 
+## v1.0.0
+
+The first real release. Bundles the v0.3.0 → v0.10.0 cuts into one
+banner: two new built-in levels, a per-character signature ability for
+each playable, a full editor-as-UGC loop (Load picker + theme picker +
+riddle/interactable palette), a game-feel pass (hit-pause + particles
++ fades), 18 new sound effects across every gameplay and menu event,
+and an inter-level loading screen. No save-file format changes;
+existing saves and custom levels load as-is.
+
+### Content
+
+- Two new built-in levels lift the campaign from three rooms to five.
+  - **Level 4 "The Foundry"** — a four-chamber forge map: bellows
+    hall, spike-gauntlet pressure plate, key vault, boss arena.
+    Three reading-order trigger/gate pairs chain the chambers.
+  - **Level 5 "The Sunken Archive"** — a five-room library ruin
+    with a bookshelf-lined atrium, a two-spike-row crossing, a
+    vault antechamber, an optional reading-room side area, and a
+    boss arena. The campaign's first off-path room.
+
+### Gameplay
+
+- Each playable character now has one signature active ability on
+  its own cooldown, fired with **Shift**:
+  - **Wizard — Slow:** time bends to 0.35× for every enemy, the
+    boss and their in-flight shots for 3s. The Wizard moves and
+    fires at full speed.
+  - **Shiggy — Dash:** the short, i-framed burst dash that used to
+    be universal, now Shiggy's alone.
+  - **Penguin — Shield:** total damage immunity for 2.5s.
+  - **Elf — Volley:** doubled fire rate for 2s.
+  - **Wolf — Sprint:** a 1.5s burst of peak movement speed with no
+    i-frames — distinct from Shiggy's short dash.
+- The four other characters no longer have the dash; each is defined
+  by its own ability instead.
+- Brief hit-pause on impactful events (player hit, boss hit, boss
+  death, player death) so every meaningful strike reads.
+
+### UI
+
+- The HUD dash ring is now an ability ring: a per-character glyph,
+  bright while the ability is active, a depleting arc on cooldown.
+- Character select shows each character's ability — name and a
+  one-line description — below the four stat bars.
+- Particle bursts on hits, deaths and ability activations. Player
+  hits are red, regular hits are white, boss death sprays gold with
+  a white core, and each character's signature ability blooms in
+  its own colour (Wizard violet, Penguin ice blue, Elf leaf green,
+  Shiggy warm dust, Wolf white).
+- Levels fade in on start and fade out on completion / death.
+- New inter-level loading screen shows the level title, tagline,
+  your character, and the control hints. Auto-advances after a few
+  seconds or press Enter / Space / left-click to skip; Esc cancels
+  back to the level menu (or the editor, if launched from Test).
+  Retries (R) and pause-restart bypass it.
+
+### Audio
+
+- 18 new sound effects across the board: player and enemy hits,
+  enemy and boss death, the boss's own hit, all five signature
+  abilities (Wizard slow, Penguin shield, Elf volley, Shiggy dash,
+  Wolf sprint), shoot, level complete, player death, lever click,
+  gate open, pressure plate, key pickup, and a menu confirmation
+  beep. The Settings **Sound** toggle silences both music and
+  effects.
+
+### Editor
+
+- New **Load** button reopens any custom map you saved — click a
+  row to load it back onto the canvas and keep editing.
+- New **Theme** button picks one of five floor/wall presets —
+  **Keep**, **Foundry**, **Cellar**, **Archive**, **Frost** — each
+  shown with tile swatches so you see the look before choosing.
+  The chosen theme is saved alongside the map and the level renders
+  with it everywhere. Maps saved before v0.7.0 keep the original
+  look.
+- The riddle/interactable palette exposes every interactable
+  (spikes, levers, pressure plates, gates, keys) with scroll-wheel
+  pair-id selection so chained puzzles can be authored cleanly.
+
+### Input
+
+- macOS system shortcuts (Cmd-Tab, Mission Control, Spaces) no
+  longer steal focus mid-level. The keyboard is grabbed by the
+  game while a level is live and released in menus, pause and the
+  level-end screen. The in-game Cmd-Q quit still works.
+
+### Tools
+
+- New `scripts/gen_sfx.py` deterministically (re)generates all 18
+  SFX WAV files using only stdlib `wave` + `math`, so a tuning
+  tweak ships by running the script and committing the changed
+  assets. Output lives under `assets/audio/sfx/`.
+
 ## v0.10.0
 
 Adds an inter-level loading screen between the level menu and play —
