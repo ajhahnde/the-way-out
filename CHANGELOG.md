@@ -1,4 +1,36 @@
-# CHANGELOG
+<div align="center">
+
+<h1>Changelog</h1>
+
+<p>
+    <a href="README.md"><b>README</b></a> ·
+    <b>Changelog</b>
+  </p>
+
+</div>
+
+---
+
+## v1.0.3
+
+Visual harmonisation slice of the cross-project fingerprint pass.
+Brings the-way-out's tracked-doc layout in line with FlashOS — the
+README and CHANGELOG now ship a centred HTML title block (page title +
+doc nav-bar), a `---` divider before the prose, and a bottom
+Prev/Next navigation, identical in shape to FlashOS's per-page
+template. No gameplay, save-file, or build-tooling changes.
+
+### Project
+
+- **README header restructure.** Title, tagline, badge row, and
+  doc-nav bar now sit inside a centred `<div align="center">` block,
+  followed by `---` divider, then the content. Same layout
+  FlashOS uses on each of its tracked pages.
+- **CHANGELOG nav header.** This file now opens with a matching
+  centred title block (`Changelog` H1 + README · Changelog nav-bar).
+- **Bottom Prev/Next navigation** on README (`Next: Changelog →`) and
+  this file (`← Prev: README · Back to start (README) ↺`), modelled
+  on the per-doc footer in FlashOS.
 
 ## v1.0.2
 
@@ -626,3 +658,7 @@ Initial release.
 
 - Shared theme across all screens (single palette and font set).
 - Readable status and stat text; animated character-select preview.
+
+---
+
+[← Prev: README](README.md) · [Back to start (README) ↺](README.md)

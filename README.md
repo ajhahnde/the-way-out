@@ -1,22 +1,35 @@
-# The Way Out
+<div align="center">
 
-<p align="center">
-  <a href="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml"><img src="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
-  <img src="https://img.shields.io/badge/version-v1.0.2-blue" alt="Version">
-  <img src="https://img.shields.io/badge/license-Apache%202.0-green" alt="License">
-  <img src="https://img.shields.io/badge/python-3.12+-orange" alt="Python 3.12+">
-  <img src="https://img.shields.io/badge/target-macOS-lightgrey" alt="macOS">
-</p>
+<h1>The Way Out</h1>
 
-A top-down pixel-art escape-room shooter. Pick a character, fight your
-way through locked rooms, work the levers and pressure plates, and find
-the way out.
+<h3>A top-down pixel-art escape-room shooter.</h3>
+
+<p>
+    <a href="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml"><img src="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+    <img src="https://img.shields.io/badge/version-v1.0.3-blue" alt="Version">
+    <img src="https://img.shields.io/badge/license-Apache%202.0-green" alt="License">
+    <img src="https://img.shields.io/badge/python-3.12+-orange" alt="Python 3.12+">
+    <img src="https://img.shields.io/badge/target-macOS-lightgrey" alt="macOS">
+  </p>
+
+<p>
+    <b>README</b> ·
+    <a href="CHANGELOG.md"><b>Changelog</b></a>
+  </p>
+
+</div>
+
+---
 
 <p align="center">
   <img src="assets/screenshot.png" alt="The Way Out — character select" width="780">
 </p>
 
-The Way Out's main purpose is to test and develop [eeco](https://github.com/ajhahnde/eeco).
+Pick a character, fight your way through locked rooms, work the levers
+and pressure plates, and find the way out.
+
+The Way Out's main purpose is to test and develop
+[eeco](https://github.com/ajhahnde/eeco).
 
 ## Play
 
@@ -85,3 +98,7 @@ Apache License 2.0 — see [`LICENSE`](LICENSE).
 
 - [FlashOS](https://github.com/ajhahnde/FlashOS) — AArch64 bare-metal kernel for the Raspberry Pi 4 Model B.
 - [eeco](https://github.com/ajhahnde/eeco) — self-maintaining workflow ecosystem + no-AI-spend knowledge layer.
+
+---
+
+[Next: Changelog →](CHANGELOG.md)
