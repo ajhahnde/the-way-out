@@ -6,7 +6,7 @@
 
 <p>
     <a href="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml"><img src="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
-    <img src="https://img.shields.io/badge/version-v1.0.3-blue" alt="Version">
+    <img src="https://img.shields.io/badge/version-v1.0.4-blue" alt="Version">
     <img src="https://img.shields.io/badge/license-Apache%202.0-green" alt="License">
     <img src="https://img.shields.io/badge/python-3.12+-orange" alt="Python 3.12+">
     <img src="https://img.shields.io/badge/target-macOS-lightgrey" alt="macOS">
@@ -14,6 +14,7 @@
 
 <p>
     <b>README</b> ·
+    <a href="VERSIONING.md"><b>Versioning</b></a> ·
     <a href="CHANGELOG.md"><b>Changelog</b></a>
   </p>
 
@@ -101,4 +102,4 @@ Apache License 2.0 — see [`LICENSE`](LICENSE).
 
 ---
 
-[Next: Changelog →](CHANGELOG.md)
+[Next: Versioning →](VERSIONING.md)

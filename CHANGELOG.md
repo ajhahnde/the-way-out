@@ -4,12 +4,34 @@
 
 <p>
     <a href="README.md"><b>README</b></a> ·
+    <a href="VERSIONING.md"><b>Versioning</b></a> ·
     <b>Changelog</b>
   </p>
 
 </div>
 
 ---
+
+## v1.0.4
+
+Formal versioning policy at the repository root, wired into the
+tracked-doc nav-bar between README and Changelog. No gameplay,
+save-file, build-tooling, or updater-protocol changes.
+
+### Project
+
+- **`VERSIONING.md`** — formal versioning policy at the repository
+  root. Adapts SemVer 2.0.0 for a game with a save file: **MAJOR** =
+  save-format incompatibility or in-game updater protocol break;
+  **MINOR** = new content (level, character, mechanic) with
+  forward-migrated saves; **PATCH** = bug fix / balance / perf with no
+  save-touch. Defines the single supported stream (Latest Stable; no
+  Maintenance tier), the forward-only save-migration policy with the
+  unknown-schema refuse-to-corrupt guarantee, the yank procedure (the
+  in-game updater MUST revert to the previous stable within 24 hours
+  of a yank), the 30-day pre-MAJOR announcement window, and the
+  TLS-only updater + SHA256-verified artefacts that constitute the
+  game's security surface.
 
 ## v1.0.3
 
@@ -661,4 +683,4 @@ Initial release.
 
 ---
 
-[← Prev: README](README.md) · [Back to start (README) ↺](README.md)
+[← Prev: Versioning](VERSIONING.md) · [Back to start (README) ↺](README.md)
