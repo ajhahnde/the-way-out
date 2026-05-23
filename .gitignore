@@ -1,6 +1,7 @@
 # Python Cache
 __pycache__/
 *.py[cod]
+.pytest_cache
 
 # MacOS Bin
 .DS_Store

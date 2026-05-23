@@ -1,5 +1,13 @@
 # The Way Out
 
+<p align="center">
+  <a href="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml"><img src="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <img src="https://img.shields.io/badge/version-v1.0.2-blue" alt="Version">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-green" alt="License">
+  <img src="https://img.shields.io/badge/python-3.12+-orange" alt="Python 3.12+">
+  <img src="https://img.shields.io/badge/target-macOS-lightgrey" alt="macOS">
+</p>
+
 A top-down pixel-art escape-room shooter. Pick a character, fight your
 way through locked rooms, work the levers and pressure plates, and find
 the way out.
@@ -7,8 +15,6 @@ the way out.
 <p align="center">
   <img src="assets/screenshot.png" alt="The Way Out — character select" width="780">
 </p>
-
-**Version:** v1.0.1 — see [Changelog](CHANGELOG.md)
 
 The Way Out's main purpose is to test and develop [eeco](https://github.com/ajhahnde/eeco).
 
@@ -70,3 +76,12 @@ save data lives outside the app bundle and is never touched by updates.
 
 Semantic versioning (`vMAJOR.MINOR.PATCH`); each release is a single
 annotated git tag. See [`CHANGELOG.md`](CHANGELOG.md) for the history.
+
+## License
+
+Apache License 2.0 — see [`LICENSE`](LICENSE).
+
+## See also
+
+- [FlashOS](https://github.com/ajhahnde/FlashOS) — AArch64 bare-metal kernel for the Raspberry Pi 4 Model B.
+- [eeco](https://github.com/ajhahnde/eeco) — self-maintaining workflow ecosystem + no-AI-spend knowledge layer.

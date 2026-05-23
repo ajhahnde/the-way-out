@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## v1.0.2
+
+Cross-project fingerprint pass. Harmonises the README surface with its
+sibling repos (eeco, FlashOS) so the three portfolio projects read as
+one body of work. No gameplay, save-file, or build-tooling changes —
+existing saves and custom levels load as-is.
+
+### Project
+
+- **README badge row** — adopts the canonical 5-badge fingerprint
+  modelled on FlashOS: CI · Version · License · Python · target. Same
+  ordering and same `shields.io` colour vocabulary the other two repos
+  now share. The Coverage badge is deliberately omitted — codecov is
+  not wired into the-way-out yet; it will join the row when coverage
+  reporting lands as a separate slice.
+- **`## See also` section** — new section at the foot of the README
+  cross-links [FlashOS](https://github.com/ajhahnde/FlashOS) and
+  [eeco](https://github.com/ajhahnde/eeco). Mirrors the matching
+  section both sibling repos added in the same fingerprint pass.
+- **Stale version line removed.** The standalone `**Version:** v1.0.1`
+  line below the title is superseded by the new badge row; the badge
+  is now the single source of the displayed version. Reduces
+  maintenance to one location.
+
 ## v1.0.1
 
 Repo-hygiene release. No gameplay or save-file changes; existing saves
