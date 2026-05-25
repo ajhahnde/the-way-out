@@ -1,12 +1,15 @@
 <div align="center">
 
-<h1>The Way Out</h1>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark.png">
+  <img alt="The Way Out" src="assets/logo_light.png" width="600">
+</picture>
 
 <h3>A top-down pixel-art escape-room shooter.</h3>
 
 <p>
     <a href="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml"><img src="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
-    <img src="https://img.shields.io/badge/version-v1.0.4-blue" alt="Version">
+    <img src="https://img.shields.io/badge/version-v1.0.5-blue" alt="Version">
     <img src="https://img.shields.io/badge/license-Apache%202.0-green" alt="License">
     <img src="https://img.shields.io/badge/python-3.12+-orange" alt="Python 3.12+">
     <img src="https://img.shields.io/badge/target-macOS-lightgrey" alt="macOS">

@@ -12,6 +12,26 @@
 
 ---
 
+## v1.0.5
+
+Visual identity update. Adds a new responsive project logo in the
+Orbitron font, supporting both light and dark modes via a standard
+`<picture>` element in the README. Ships with a Swift script to
+reproducibly regenerate the assets. No gameplay, save-file, or
+build-tooling changes.
+
+### Project
+
+- **Responsive Logo.** The README now features a high-fidelity
+  Orbitron logo that automatically switches between a black version
+  (light mode) and a white version (dark mode).
+- **`scripts/render_logo.swift`** — new Swift script using `AppKit` to
+  render the project title into pixel-perfect PNG assets. Ensures the
+  visual identity can be regenerated or modified without external
+  design tools.
+- **README Header Update.** Replaced the `<h1>` title with the new
+  responsive logo block.
+
 ## v1.0.4
 
 Formal versioning policy at the repository root, wired into the

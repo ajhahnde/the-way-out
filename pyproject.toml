@@ -1,6 +1,6 @@
 [project]
 name = "the-way-out"
-version = "1.0.4"
+version = "1.0.5"
 description = "A top-down pixel-art escape-room shooter."
 readme = "README.md"
 license = { text = "Apache-2.0" }
