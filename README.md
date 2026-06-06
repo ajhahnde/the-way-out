@@ -17,6 +17,7 @@
 
 <p>
     <b>README</b> ·
+    <a href="DOCUMENTATION.md"><b>Documentation</b></a> ·
     <a href="VERSIONING.md"><b>Versioning</b></a> ·
     <a href="CHANGELOG.md"><b>Changelog</b></a>
   </p>
@@ -28,6 +29,9 @@
 <p align="center">
   <img src="assets/screenshot.png" alt="The Way Out — character select" width="780">
 </p>
+
+> The character-select screen: five playables, each with its own HP,
+> speed, damage, fire-rate, and signature ability.
 
 Pick a character, fight your way through locked rooms, work the levers
 and pressure plates, and find the way out.
@@ -79,6 +83,10 @@ in-game editor (`editor.py`) edits them live.
 | `audio.py`                                                  | Music & SFX                              |
 | `assets/`                                                   | Sprites, audio, fonts, level maps        |
 
+A deeper walk-through of each subsystem — the game loop, levels,
+combat, the editor, the save file, and the self-updater — is in
+[Documentation](DOCUMENTATION.md).
+
 ## Build (macOS)
 
 ```bash
@@ -105,4 +113,4 @@ Apache License 2.0 — see [`LICENSE`](LICENSE).
 
 ---
 
-[Next: Versioning →](VERSIONING.md)
+[Next: Documentation →](DOCUMENTATION.md)

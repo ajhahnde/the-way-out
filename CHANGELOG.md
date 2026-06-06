@@ -1,9 +1,14 @@
 <div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark.png">
+    <img src="assets/logo_light.png" alt="The Way Out" width="280">
+  </picture>
 
 <h1>Changelog</h1>
 
 <p>
     <a href="README.md"><b>README</b></a> ·
+    <a href="DOCUMENTATION.md"><b>Documentation</b></a> ·
     <a href="VERSIONING.md"><b>Versioning</b></a> ·
     <b>Changelog</b>
   </p>
@@ -11,6 +16,15 @@
 </div>
 
 ---
+
+All notable changes to The Way Out are recorded in this file. The
+format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+adapted for a game with a save file (see [VERSIONING.md](VERSIONING.md)).
+Per-tag notes also appear on the
+[releases page](https://github.com/ajhahnde/the-way-out/releases).
+
+## [Unreleased]
 
 ## v1.0.5
 
@@ -700,6 +714,8 @@ Initial release.
 
 - Shared theme across all screens (single palette and font set).
 - Readable status and stat text; animated character-select preview.
+
+[Unreleased]: https://github.com/ajhahnde/the-way-out/compare/v1.0.5...HEAD
 
 ---
 

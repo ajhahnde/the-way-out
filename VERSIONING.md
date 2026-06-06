@@ -4,6 +4,7 @@
 
 <p>
     <a href="README.md"><b>README</b></a> ·
+    <a href="DOCUMENTATION.md"><b>Documentation</b></a> ·
     <b>Versioning</b> ·
     <a href="CHANGELOG.md"><b>Changelog</b></a>
   </p>
@@ -349,4 +350,4 @@ any time.
 
 ---
 
-[← Prev: README](README.md) · [Next: Changelog →](CHANGELOG.md)
+[← Prev: Documentation](DOCUMENTATION.md) · [Next: Changelog →](CHANGELOG.md)
