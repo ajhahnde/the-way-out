@@ -26,7 +26,7 @@ Per-tag notes also appear on the
 
 ## [Unreleased]
 
-## v1.0.5
+## [v1.0.5] - 2026-05-26
 
 Visual identity update. Adds a new responsive project logo in the
 Orbitron font, supporting both light and dark modes via a standard
@@ -46,7 +46,7 @@ build-tooling changes.
 - **README Header Update.** Replaced the `<h1>` title with the new
   responsive logo block.
 
-## v1.0.4
+## [v1.0.4] - 2026-05-23
 
 Formal versioning policy at the repository root, wired into the
 tracked-doc nav-bar between README and Changelog. No gameplay,
@@ -67,7 +67,7 @@ save-file, build-tooling, or updater-protocol changes.
   TLS-only updater + SHA256-verified artefacts that constitute the
   game's security surface.
 
-## v1.0.3
+## [v1.0.3] - 2026-05-23
 
 Visual harmonisation slice of the cross-project fingerprint pass.
 Brings the-way-out's tracked-doc layout in line with FlashOS — the
@@ -88,7 +88,7 @@ template. No gameplay, save-file, or build-tooling changes.
   this file (`← Prev: README · Back to start (README) ↺`), modelled
   on the per-doc footer in FlashOS.
 
-## v1.0.2
+## [v1.0.2] - 2026-05-23
 
 Cross-project fingerprint pass. Harmonises the README surface with its
 sibling repos (eeco, FlashOS) so the three portfolio projects read as
@@ -112,7 +112,7 @@ existing saves and custom levels load as-is.
   is now the single source of the displayed version. Reduces
   maintenance to one location.
 
-## v1.0.1
+## [v1.0.1] - 2026-05-21
 
 Repo-hygiene release. No gameplay or save-file changes; existing saves
 and custom levels load as-is. Brings the project's tooling in line with
@@ -149,7 +149,7 @@ contributed to without the operator in the loop.
   at module import and the smoke test would have hung forever.
 - README's version line said `v0.2.2` (stale from v1.0.0); now `v1.0.1`.
 
-## v1.0.0
+## [v1.0.0] - 2026-05-21
 
 The first real release. Bundles the v0.3.0 → v0.10.0 cuts into one
 banner: two new built-in levels, a per-character signature ability for
@@ -244,7 +244,7 @@ existing saves and custom levels load as-is.
   tweak ships by running the script and committing the changed
   assets. Output lives under `assets/audio/sfx/`.
 
-## v0.10.0
+## [v0.10.0] - 2026-05-20
 
 Adds an inter-level loading screen between the level menu and play —
 one focused beat showing the level title, tagline, your character, and
@@ -265,7 +265,7 @@ the controls before the room becomes interactive.
   still suspended during the fade so the player can't be hit before
   they can react.
 
-## v0.9.0
+## [v0.9.0] - 2026-05-20
 
 Hits, abilities, doors and pickups now have sound. Adds 18
 synthesised chiptune-style sound effects covering every gameplay
@@ -290,7 +290,7 @@ the level's interactables.
   by running the script and committing the changed assets. Output
   lives under `assets/audio/sfx/`.
 
-## v0.8.0
+## [v0.8.0] - 2026-05-20
 
 Combat now reads — every hit registers. Adds game-feel polish across
 the level: brief hit-pause on impactful events, particle bursts on
@@ -314,7 +314,7 @@ hits / deaths / abilities, and a fade between level start and end.
 - Levels fade in on start and fade out on completion / death-to-retry
   so transitions read as a deliberate cut.
 
-## v0.7.0
+## [v0.7.0] - 2026-05-20
 
 Lets you give each custom map its own **visual theme** in the level
 editor — until now every player-built map used the same floor and wall
@@ -331,7 +331,7 @@ tiles.
   click outside to dismiss the picker.
 - Maps saved before this release keep the original look.
 
-## v0.6.0
+## [v0.6.0] - 2026-05-20
 
 Lets the level editor **reopen a custom map you saved**, closing the
 loop on the editor as a community-UGC feature — until now a saved map
@@ -345,7 +345,7 @@ could be played but never edited again.
 - The picker scrolls (mouse wheel) when you have more saved maps than
   fit on screen, and shows a hint when you have none yet.
 
-## v0.5.0
+## [v0.5.0] - 2026-05-20
 
 Gives every playable character a distinct **signature ability** on a
 cooldown, triggered with **Shift** — the combat differentiator for the
@@ -383,7 +383,7 @@ v1.0.0 cut. The universal dash is now Shiggy's alone.
   grab is released in menus, pause and the level-end screen so the
   player can always tab away. The in-game Cmd-Q quit still works.
 
-## v0.4.0
+## [v0.4.0] - 2026-05-20
 
 Adds the second new built-in level for the v1.0.0 cut: **Level 5 —
 "The Sunken Archive"**, the largest map shipped to date and the first
@@ -402,7 +402,7 @@ with an optional side area.
   the existing generic glyph dispatch in `levels.py` — no code
   changes.
 
-## v0.3.0
+## [v0.3.0] - 2026-05-20
 
 Adds the first new built-in level since v0.1: **Level 4 — "The
 Foundry"**, lifting the campaign past the three-room demo line.
@@ -418,7 +418,7 @@ Foundry"**, lifting the campaign past the three-room demo line.
   vault opens the gate into the boss arena. Loads via the existing
   generic glyph dispatch in `levels.py` — no code changes.
 
-## v0.2.15
+## [v0.2.15] - 2026-05-20
 
 A maintenance release. No gameplay, tools, or save-file format
 changes; existing saves and custom levels load as-is.
@@ -438,7 +438,7 @@ changes; existing saves and custom levels load as-is.
   `certifi.where()` (with a system-default fallback so dev runs on a
   homebrew openssl or Linux distro keep working).
 
-## v0.2.14
+## [v0.2.14] - 2026-05-20
 
 A maintenance release. No gameplay, tools, or save-file format
 changes; existing saves and custom levels load as-is.
@@ -458,7 +458,7 @@ changes; existing saves and custom levels load as-is.
   manually in the rare case the bundle path can't be derived (dev
   runs and `/Applications` installs are unaffected).
 
-## v0.2.13
+## [v0.2.13] - 2026-05-20
 
 A maintenance release. No gameplay, tools, or save-file format changes;
 existing saves and custom levels load as-is.
@@ -474,7 +474,7 @@ existing saves and custom levels load as-is.
   survives. Dev runs (`python main.py` / `python launcher.py`) still
   restart via `os.execv` as before.
 
-## v0.2.12
+## [v0.2.12] - 2026-05-20
 
 A level-editor polish release. No gameplay or save-file format
 changes; existing saves and custom levels load as-is.
@@ -493,7 +493,7 @@ changes; existing saves and custom levels load as-is.
   stays unaffected. Esc / Test / window-focus loss always returns
   to the collapsed state.
 
-## v0.2.11
+## [v0.2.11] - 2026-05-20
 
 Maintenance release. No gameplay, tools, or save-file format changes;
 existing saves and custom levels load as-is.
@@ -505,7 +505,7 @@ existing saves and custom levels load as-is.
   as ASCII `<` `>` (the bundled pixel font has no arrow glyphs).
   Comments corrected to match the code; no runtime change.
 
-## v0.2.10
+## [v0.2.10] - 2026-05-20
 
 A level-editor polish release. No gameplay or save-file format
 changes; existing saves and custom levels load as-is.
@@ -518,7 +518,7 @@ changes; existing saves and custom levels load as-is.
   step through its variants, so a tile and variant can be previewed
   before being painted. The mouse wheel still cycles variants too.
 
-## v0.2.9
+## [v0.2.9] - 2026-05-20
 
 Maintenance release. No gameplay or save-file format changes.
 
@@ -528,7 +528,7 @@ Maintenance release. No gameplay or save-file format changes.
 - `.gitignore` no longer tracks the local `.eeco/` workspace or the
   legacy `ajhahnde/` notes directory.
 
-## v0.2.8
+## [v0.2.8] - 2026-05-19
 
 The packaged macOS app now installs itself into `/Applications`. No
 save-file format changes; existing saves load as-is.
@@ -543,7 +543,7 @@ save-file format changes; existing saves load as-is.
   prompt is shown; if the copy can't be done for any reason the game
   still starts in place. Running an already-installed copy is a no-op.
 
-## v0.2.7
+## [v0.2.7] - 2026-05-19
 
 A playable title screen, in the style of an Assassin's Creed loading
 screen. No save-file format changes; existing saves load as-is.
@@ -563,7 +563,7 @@ screen. No save-file format changes; existing saves load as-is.
 - Picking a different character in the Characters menu immediately
   updates the avatar shown on the title screen.
 
-## v0.2.6
+## [v0.2.6] - 2026-05-19
 
 A small polish release: two missing-glyph fixes in the UI and a
 proper macOS Cmd+Q shortcut. No save-file format changes.
@@ -585,7 +585,7 @@ proper macOS Cmd+Q shortcut. No save-file format changes.
   toggles the paint/pick tool — it just ignores the keystroke when
   the Command key is held.
 
-## v0.2.3
+## [v0.2.3] - 2026-05-19
 
 An icon-polish release. No save-file format changes; existing saves
 load as-is.
@@ -598,7 +598,7 @@ load as-is.
   `scripts/make_icon.py` as the bundled macOS `.icns` and the runtime
   pygame window icon.
 
-## v0.2.2
+## [v0.2.2] - 2026-05-19
 
 A polish release: a new app icon plus editor and input fixes. No
 save-file format changes; existing saves load as-is.
@@ -627,7 +627,7 @@ save-file format changes; existing saves load as-is.
 - Release history moved from `RELEASE_NOTES.md` into this
   `CHANGELOG.md`; the former is removed.
 
-## v0.2.1
+## [v0.2.1] - 2026-05-19
 
 A bug-fix patch. No save-file format changes; existing saves load
 as-is.
@@ -644,7 +644,7 @@ as-is.
 - Units: a missing or renamed sprite sheet degrades to a visible
   magenta placeholder frame instead of crashing with `IndexError`.
 
-## v0.2.0
+## [v0.2.0] - 2026-05-19
 
 A content and polish update. No save-file format changes; v0.1.0 saves
 load as-is.
@@ -684,7 +684,7 @@ load as-is.
   `MenuScene` background, so future screens can opt into the same
   ambient look without re-implementing it.
 
-## v0.1.0
+## [v0.1.0] - 2026-05-19
 
 Initial release.
 
