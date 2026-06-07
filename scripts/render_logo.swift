@@ -51,8 +51,8 @@ func render(color: NSColor, filename: String) {
     }
 }
 
-// Generate light mode logo (black text)
-render(color: .black, filename: "logo_light.png")
+// Generate light mode logo (Atom One Light foreground #383a42)
+render(color: NSColor(srgbRed: 56.0/255.0, green: 58.0/255.0, blue: 66.0/255.0, alpha: 1.0), filename: "logo_light.png")
 
 // Generate dark mode logo (white text)
 render(color: .white, filename: "logo_dark.png")
