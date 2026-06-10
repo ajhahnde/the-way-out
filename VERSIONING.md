@@ -1,6 +1,12 @@
 <div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark.png">
+    <img src="assets/logo_light.png" alt="The Way Out" width="280">
+  </picture>
 
 <h1>Versioning Policy</h1>
+
+<p><i>The contract for how The Way Out is versioned, released, supported, and retired.</i></p>
 
 <p>
     <a href="README.md"><b>README</b></a> ·

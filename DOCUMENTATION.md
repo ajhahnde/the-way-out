@@ -6,6 +6,8 @@
 
 <h1>Documentation</h1>
 
+<p><i>How the game loop, levels, characters, interactables, editor, save file, and self-updater fit together.</i></p>
+
 <p>
     <a href="README.md"><b>README</b></a> ·
     <b>Documentation</b> ·

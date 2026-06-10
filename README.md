@@ -8,11 +8,11 @@
 <h3>A top-down pixel-art escape-room shooter.</h3>
 
 <p>
-    <a href="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml"><img src="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
-    <img src="https://img.shields.io/badge/version-v1.0.5-blue" alt="Version">
-    <img src="https://img.shields.io/badge/license-Apache%202.0-green" alt="License">
-    <img src="https://img.shields.io/badge/python-3.12+-orange" alt="Python 3.12+">
-    <img src="https://img.shields.io/badge/target-macOS-lightgrey" alt="macOS">
+    <a href="https://github.com/ajhahnde/the-way-out/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ajhahnde/the-way-out/ci.yml?branch=main&style=flat-square&label=ci" alt="CI"></a>
+    <img src="https://img.shields.io/badge/version-v1.0.5-10b981?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/badge/python-3.12+-lightgrey?style=flat-square" alt="Python 3.12+">
+    <img src="https://img.shields.io/badge/target-macOS-lightgrey?style=flat-square" alt="macOS">
+    <img src="https://img.shields.io/badge/license-Apache--2.0-lightgrey?style=flat-square" alt="License">
   </p>
 
 <p>
