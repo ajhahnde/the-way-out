@@ -36,9 +36,6 @@
 Pick a character, fight your way through locked rooms, work the levers
 and pressure plates, and find the way out.
 
-The Way Out's main purpose is to test and develop
-[eeco](https://github.com/ajhahnde/eeco).
-
 ## Play
 
 ```bash
@@ -109,7 +106,6 @@ Apache License 2.0 — see [`LICENSE`](LICENSE).
 ## See also
 
 - [FlashOS](https://github.com/ajhahnde/FlashOS) — AArch64 bare-metal kernel for the Raspberry Pi 4 Model B.
-- [eeco](https://github.com/ajhahnde/eeco) — self-maintaining workflow ecosystem + no-AI-spend knowledge layer.
 
 ---
 

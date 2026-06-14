@@ -114,8 +114,7 @@ and that the updater protocol exposes. The file MUST:
 
 The version exposed by `pyproject.toml` and any in-app About screen
 MUST match the `VERSION` file string. A drift between any two of them
-is a release-process bug. (The `eeco` `version-sync` workflow is the
-recommended way to enforce this in CI; see [`eeco`'s docs](https://github.com/ajhahnde/eeco/blob/main/docs/USAGE.md).)
+is a release-process bug.
 
 ### 3.4 What is NOT part of the public surface
 
